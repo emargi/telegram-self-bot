@@ -43,7 +43,7 @@ class VoiceChat:
     async def Play(self: 'VoiceChat', AudioFilePath: str) -> bool:
         self.gc.input_filename = AudioFilePath
     
-    async def ConvertAudio(self: 'VoiceChat', InputAudioFilePath: str, OutputAudioFilePath: str) -> Union[str, False]:
+    async def ConvertAudio(self: 'VoiceChat', InputAudioFilePath: str, OutputAudioFilePath: str) -> Union[str, bool]:
         try:
             ffmpeg.input(InputAudioFilePath).output(
                 OutputAudioFilePath, format="s16le", acodec="pcm_s16le", ac=2, ar="48k"

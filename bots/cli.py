@@ -22,7 +22,7 @@ class CliHandlers:
     def __init__(self: 'CliHandlers', client: TelegramClient, conn, cursor):
         """CliHandlers class for handling Client telegram bot events"""
         self.bot = client
-        self.info = asyncio.run(self.bot.get_me())
+        # self.info = asyncio.run(self.bot.get_me())
         self.vc = VoiceChat(client)
         self.conn = conn
         self.cursor = cursor
@@ -167,7 +167,7 @@ class CliHandlers:
         try:
             start_time = perf_counter()
             eval(code)
-        except Exception() as e:
+        except Exception as e:
             end_time = perf_counter()
             await event.edit(status.format(code, '', str(e), str(end_time - start_time)), parse_mode="html")
         else:

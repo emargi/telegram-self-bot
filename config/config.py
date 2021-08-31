@@ -17,11 +17,11 @@ class Config:
     
     @property
     def api_id(self: 'Config') -> int:
-        return self.conf.get("info", "api_id")
+        return int(self.conf.get("info", "api_id"))
     
     @property
     def api_hash(self: 'Config') -> str:
-        return int(self.conf.get("info", "api_hash"))
+        return self.conf.get("info", "api_hash")
     
     @property
     def bot_token(self: 'Config') -> str:

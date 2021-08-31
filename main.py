@@ -6,7 +6,7 @@ import sqlite3
 import logging
 
 # Logging
-log = logging.basicConfig(level=logging.DEBUG)
+# log = logging.basicConfig(level=logging.DEBUG)
 
 # Config
 config = Config()
