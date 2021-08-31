@@ -19,13 +19,14 @@ async def TimeInBio() -> None:
     await CLIENT(UpdateProfileRequest(about=f"𝕿𝖎𝖒𝖊: {now.hour}:{now.minute}"))
 
 class CliHandlers:
-    def __init__(self: 'CliHandlers', client: TelegramClient, conn, cursor):
+    def __init__(self: 'CliHandlers', client: TelegramClient, conn, cursor, log):
         """CliHandlers class for handling Client telegram bot events"""
         self.bot = client
-        # self.info = asyncio.run(self.bot.get_me())
+        self.info = asyncio.get_running_loop().create_task(self.bot.get_me())
         self.vc = VoiceChat(client)
         self.conn = conn
         self.cursor = cursor
+        self.log = log
 
         global CLIENT
         global CONN
@@ -178,7 +179,11 @@ class CliHandlers:
             await event.edit(status.format(code, "Successfully runned", '', str(end_time - start_time)), parse_mode="html")
     
     async def TimeInBioMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        self.log.debug("In TimeInBioMessageHandler asynchronous function")
+
         command = event.text.split(' ')[1].lower()
+
+        self.log.debug(command)
 
         if command not in ["on", "off"]:
             await event.edit("Invalid command!\nCommand must be between <code>on</code>, <code>off</code>", parse_mode="html")
@@ -187,6 +192,8 @@ class CliHandlers:
         isSettedTheRow = lambda conn, cursor: self.cursor.execute("SELECT timeinbio FROM reqs WHERE rowid = 1").fetchone()
 
         if command == "on":
+            await event.edit("TimeInBio setted to on")
+
             if isSettedTheRow(self.conn, self.cursor):
                 cmdToExecute = "UPDATE reqs SET timeinbio = 1 WHERE rowid = 1"
             
@@ -194,6 +201,7 @@ class CliHandlers:
                 cmdToExecute = "INSERT INTO reqs VALUES (1, 0)"
         
         else:
+            await event.edit("TimeInBio setted to off")
             if isSettedTheRow(self.conn, self.cursor):
                 cmdToExecute = "UPDATE reqs SET timeinbio = 0 WHERE rowid = 1"
             
