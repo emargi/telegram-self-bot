@@ -1,2 +1,6 @@
 telethon
 aiohttp
+pytz
+aiocron
+pytgcalls
+ffmpeg-python

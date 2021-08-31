@@ -6,7 +6,7 @@ import sqlite3
 import logging
 
 # Logging
-# log = logging.basicConfig(level=logging.DEBUG)
+logger = logging.basicConfig(level=logging.ERROR)
 
 # Config
 config = Config()
@@ -20,14 +20,14 @@ cursor.execute("CREATE TABLE IF NOT EXISTS reqs (timeinbio INTEGER, firstcomment
 connect.commit()
 
 # Bots handlers
-async def CliBot(conf: Config) -> None:
+async def CliBot(conf: Config, connect, cursor, logger) -> None:
     bot = await TelegramClient(
         "cli",
         api_id = conf.api_id,
         api_hash = conf.api_hash
     ).start(conf.phone_number)
 
-    handlers = CliHandlers(bot, connect, cursor)
+    handlers = CliHandlers(bot, connect, cursor, logger)
 
     bot.add_event_handler(
         handlers.SendPing,
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(
         asyncio.gather(
-            *(CliBot(config), ApiBot(config))
+            *(CliBot(config, connect, cursor, logger), ApiBot(config))
         )
     )
     loop.run_forever()
