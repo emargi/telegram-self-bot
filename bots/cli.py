@@ -166,7 +166,10 @@ class CliHandlers:
 
         try:
             start_time = perf_counter()
-            eval(code)
+            real_code = '\n'.join(["  "+c for c in code.split("\n")])
+            runner_code = """async def runner(event):\n"""+real_code
+            exec(runner_code, globals())
+            asyncio.get_running_loop().create_task(runner(event))
         except Exception as e:
             end_time = perf_counter()
             await event.edit(status.format(code, '', str(e), str(end_time - start_time)), parse_mode="html")
