@@ -54,6 +54,16 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
         events.NewMessage(outgoing=True, pattern=r"^timeinbio [a-zA-Z]+$")
     )
     
+    bot.add_event_handler(
+        handlers.FirstCommentMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^first comment [a-zA-Z]+$")
+    )
+
+    bot.add_event_handler(
+        handlers.CommentToChannelsPost,
+        events.NewMessage(outgoing=True, func=lambda event: event.is_channel and not event.is_group) # Supergroups are channel types too, so if is_group is False and is_channel is True, chat should be a channel type
+    )
+    
     await bot.run_until_disconnected()
 
 async def ApiBot(conf: Config) -> None:

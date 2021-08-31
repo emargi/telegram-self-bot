@@ -202,6 +202,7 @@ class CliHandlers:
         
         else:
             await event.edit("TimeInBio setted to off")
+
             if isSettedTheRow(self.conn, self.cursor):
                 cmdToExecute = "UPDATE reqs SET timeinbio = 0 WHERE rowid = 1"
             
@@ -210,4 +211,40 @@ class CliHandlers:
         
         self.cursor.execute(cmdToExecute)
         self.conn.commit()
+    
+    async def FirstCommentMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        command = event.text.split(' ')[2].lower() # e.g ["first", "comment", "on"]
+
+        if command not in ["on", "off"]:
+            await event.edit("Invalid command!\nYou must insert between on and off")
+            return
+        
+        isSettedTheRow = lambda conn, cursor: cursor.execute("SELECT firstcomment FROM reqs WHERE rowid = 1").fetchone()
+
+        if command == "on":
+            await event.edit("first comment setted to on")
+
+            if isSettedTheRow(self.conn, self.cursor):
+                cmdToExecute = "UPDATE reqs SET firstcomment = 1 WHERE rowid = 1"
+            
+            else:
+                cmdToExecute = "INSERT INTO reqs VALUES (0, 1)"
+        
+        else:
+            await event.edit("first comment setted to off")
+
+            if isSettedTheRow(self.conn, self.cursor):
+                cmdToExecute = "UPDATE reqs SET firstcomment = 0 WHERE rowid = 1"
+            
+            else:
+                cmdToExecute = "INSERT INTO reqs VALUES (0, 0)"
+        
+        self.cursor.execute(cmdToExecute)
+        self.conn.commit()
+    
+    async def CommentToChannelsPost(self: 'CliHandlers', event: Message) -> None:
+        if not self.cursor.execute("SELECT * FROM reqs WHERE rowid = 1").fetchone() or not self.cursor.execute("SELECT firstcomment FROM reqs WHERE rowid = 1").fetchone()[0]:
+            return
+        
+        await self.bot.send_message((await event.get_chat()), "First comment ⚡️", comment_to=event.id)
     
