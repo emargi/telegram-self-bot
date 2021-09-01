@@ -16,8 +16,8 @@ connect = sqlite3.connect("database.db")
 cursor = connect.cursor()
 
 # Database requirements
-cursor.execute("CREATE TABLE IF NOT EXISTS reqs (timeinbio INTEGER, firstcomment INTEGER)") # Setted integer to get/set it as 0 and 1
-cursor.execute("CREATE TABLE IF NOT EXISTS settings (chat_id INTEGER, action INTEGER, action_type TEXT)") # Setted integer to get/set it as 0 and 1
+cursor.execute("CREATE TABLE IF NOT EXISTS reqs (timeinbio INTEGER, firstcomment INTEGER, action INTEGER, action_aor INTEGER, action_type TEXT)") # Setted integer to get/set it as 0 and 1
+cursor.execute("CREATE TABLE IF NOT EXISTS chats (chat_id TEXT, action INTEGER, action_type TEXT)")
 connect.commit()
 
 # Bots handlers
@@ -27,7 +27,7 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
         api_id = conf.api_id,
         api_hash = conf.api_hash
     ).start(conf.phone_number)
-
+    
     handlers = CliHandlers(bot, connect, cursor, logger)
 
     bot.add_event_handler(
@@ -67,19 +67,34 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
 
     bot.add_event_handler(
         handlers.ActionTypeMessageHandler,
-        events.NewMessage(outgoing=True, pattern=r"^actiontype [a-zA-Z]+$")
+        events.NewMessage(outgoing=True, pattern=r"^action type [a-zA-Z]+$")
+    )
+
+    bot.add_event_handler(
+        handlers.SendActionHandler,
+        events.NewMessage(incoming=True, func=lambda event: (event.is_channel and event.is_group) or (event.is_group and not event.is_channel)) # (supergroups) or (groups)
     )
 
     bot.add_event_handler(
         handlers.CommentToChannelsPost,
-        events.NewMessage(outgoing=True, func=lambda event: event.is_channel and not event.is_group) # Supergroups are channel types too, so if is_group is False and is_channel is True, chat should be a channel type
+        events.NewMessage(func=lambda event: event.is_channel and not event.is_group) # Supergroups are channel types too, so if is_group is False and is_channel is True, chat should be a channel type
     )
     
     bot.add_event_handler(
         handlers.CodeRunnerMessageHandler,
-        events.NewMessage(pattern=r"\Apython3[\n ].+")
+        events.NewMessage(outgoing=True, pattern=r"\Apython3[\n ].+")
     )
     
+    bot.add_event_handler(
+        handlers.LOLMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^lol$")
+    )
+
+    bot.add_event_handler(
+        handlers.LikeMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^like$")
+    )
+
     await bot.run_until_disconnected()
 
 async def ApiBot(conf: Config) -> None:

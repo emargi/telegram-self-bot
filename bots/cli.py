@@ -200,7 +200,7 @@ class CliHandlers:
                 cmdToExecute = "UPDATE reqs SET timeinbio = 1 WHERE rowid = 1"
             
             else:
-                cmdToExecute = "INSERT INTO reqs VALUES (1, 0)"
+                cmdToExecute = "INSERT INTO reqs VALUES (1, 0, 0)"
         
         else:
             await event.edit("TimeInBio setted to off")
@@ -209,7 +209,7 @@ class CliHandlers:
                 cmdToExecute = "UPDATE reqs SET timeinbio = 0 WHERE rowid = 1"
             
             else:
-                cmdToExecute = "INSERT INTO reqs VALUES (0, 0)"
+                cmdToExecute = "INSERT INTO reqs VALUES (0, 0, 0)"
         
         self.cursor.execute(cmdToExecute)
         self.conn.commit()
@@ -230,7 +230,7 @@ class CliHandlers:
                 cmdToExecute = "UPDATE reqs SET firstcomment = 1 WHERE rowid = 1"
             
             else:
-                cmdToExecute = "INSERT INTO reqs VALUES (0, 1)"
+                cmdToExecute = "INSERT INTO reqs VALUES (0, 1, 0)"
         
         else:
             await event.edit("first comment setted to off")
@@ -239,7 +239,7 @@ class CliHandlers:
                 cmdToExecute = "UPDATE reqs SET firstcomment = 0 WHERE rowid = 1"
             
             else:
-                cmdToExecute = "INSERT INTO reqs VALUES (0, 0)"
+                cmdToExecute = "INSERT INTO reqs VALUES (0, 0, 0)"
         
         self.cursor.execute(cmdToExecute)
         self.conn.commit()
@@ -266,8 +266,212 @@ class CliHandlers:
         )
     
     async def ActionMessageHandler(self: 'CliHandlers', event: Message) -> None:
-        status = event.raw.text.split(" ")[1].lower()
+        # status = event.text.split(' ')[1].lower()
+
+        # if status not in (
+        #     "off",
+        #     "typing", # https://docs.telethon.dev/en/latest/modules/client.html?highlight=action#telethon.client.chats.ChatMethods.action
+        #     "contact",
+        #     "game",
+        #     "location",
+        #     "sticker",
+        #     "record-audio",
+        #     "record-round",
+        #     "record-video",
+        #     "audio",
+        #     "song",
+        #     "round",
+        #     "video",
+        #     "photo",
+        #     "document",
+        #     "cancel"
+        # ):
+        #     await event.edit("Invalid command!\nMust be among off and chat action types (send panel and search actions on panel)")
+        #     return
+        
+        # chat = await event.get_chat()
+        # isSettedTheRow = lambda cursor: cursor.execute("SELECT * FROM reqs WHERE rowid = 1").fetchone()
+
+        # if status == "off":
+        #     await event.edit("action setted to off")
+
+        #     if isSettedTheRow(self.cursor):
+        #         cmdToExecute = "UPDATE reqs SET action = 0 WHERE rowid = 1"
+            
+        #     else:
+        #         cmdToExecute = "INSERT INTO reqs VALUES (0, 0, 0)"
+        
+        # else:
+        #     await event.edit(f"action setted to {status}")
+
+        #     isSettedTheSecRow = lambda cursor: cursor.execute("SELECT * FROM chat_action WHERE rowid = 1")
+
+        #     if isSettedTheRow(self.cursor):
+        #         cmdToExecute = "UPDATE reqs SET action = 1 WHERE rowid = 1"
+
+        #         if isSettedTheSecRow(self.cursor):
+        #             cmd2ToExecute = f"UPDATE chat_action SET type = '{status}'"
+                
+        #         else:
+        #             cmd2ToExecute = f"INSERT INTO chat_action VALUES ('{status}')"
+            
+        #     else:
+        #         cmdToExecute = "INSERT INTO reqs VALUES (0, 0, 1)"
+
+        #         if isSettedTheSecRow(self.cursor):
+        #             cmd2ToExecute = f"UPDATE chat_action SET type = '{status}'"
+                
+        #         else:
+        #             cmd2ToExecute = f"INSERT INTO chat_action VALUES ('{status}')"
+
+        # self.cursor.execute(cmdToExecute)
+        # self.conn.commit()
+
+        # try:
+        #     self.cursor.execute(cmd2ToExecute)
+        # except:
+        #     pass
+        # else:
+        #     self.conn.commit()
+    
+        status = event.raw_text.split(" ")[1].lower()
         if status in ('on', 'off'):
-            query = ""
+            query = "SELECT * FROM reqs"
+            result = self.cursor.execute(query)
+            result = result.fetchone()
+            if result:
+                if str(result[3]) == "1":
+                    if str(result[2]) == "1":
+                        if status == "off":
+                            await event.edit("Action sending status turned off")
+                            query = "UPDATE reqs SET action = ?"
+                            parameters = (0,)
+                        else:
+                            await event.edit("Action sending status already is on")
+                    else:
+                        if status == "on":
+                            await event.edit("Action sending status turned on")
+                            query = "UPDATE reqs SET action = ?"
+                            parameters = (1,)
+                        else:
+                            await event.edit("Action sending status already is off")
+                    if ("query" in globals() or "query" in locals()) and "parameters" in globals() or "parameters" in locals(): self.cursor.execute(query, parameters); self.conn.commit()
+                else:
+                    query = "SELECT * FROM chats WHERE chat_id = ?"
+                    parameters = (event.chat_id,)
+                    result = self.cursor.execute(query, parameters)
+                    result = result.fetchone()
+                    if result or result[0]:
+                        action_status = result[1]
+                        action_type   = result[2]
+                        if action_status == "off":
+                            if status == "off":
+                                await event.edit("sending actions in this chat already is off")
+                            elif status == "on":
+                                await event.edit("sending action in this chat turned on")
+                                query = "UPDATE chats SET action = 1 WHERE chat_id = ?"
+                                parameters = (event.chat_id,)
+                        elif action_status == "on":
+                            if status == "on":
+                                await event.edit("sending actions in this chat already is on")
+                            elif status == "off":
+                                await event.edit("sending action in this chat turned off")
+                                query = "UPDATE chats SET action = 0 WHERE chat_id = ?"
+                                parameters = (event.chat_id,)
+                        if ("query" in globals() or "query" in locals()) and "parameters" in globals() or "parameters" in locals(): self.cursor.execute(query, parameters); self.conn.commit()
+                    else:
+                        action_status = "off"
+                        action_type   = "none"
+                        if status == "on":
+                            await event.edit("sending actions in this chat turned on")
+                            query = "INSERT INTO chats VALUES(?, ?, ?)"
+                            parameters = (event.chat_id, 1, "typing")
+                        elif status == "off":
+                            await event.edit("sending actions in this chat already is off")
+                        if ("query" in globals() or "query" in locals()) and "parameters" in globals() or "parameters" in locals(): self.cursor.execute(query, parameters); self.conn.commit()
+            else:
+                action_status = "off"
+                action_type   = "none"
+                if status == "off":
+                    await event.edit("sending actions in this chat already is off")
+                elif status == "on":
+                    await event.edit("sending actions turned on")
+                    query = "INSERT INTO reqs VALUES(0, 0,  ?, ?, \"typing\")"
+                    parameters = (1, 1,)
+                if ("query" in globals() or "query" in locals()) and "parameters" in globals() or "parameters" in locals(): self.cursor.execute(query, parameters); self.conn.commit()          
         else:
             await event.edit("Status can be only on or off")
+
+    async def ActionTypeMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        action_type = event.raw_text.split(" ")[-1]
+        
+        if action_type in (
+            'typing',
+            'contact',
+            'game',
+            'location',
+            'sticker',
+            'record-audio',
+            'record-round',
+            'record-video',
+            'audio',
+            'song',
+            'round',
+            'video',
+            'photo',
+            'document'
+        ):
+
+            result = self.cursor.execute("SELECT * FROM reqs").fetchone()
+            if result:
+                if result[3]: # If action_aor == All chat, 1 == True Hale :)
+                    if not result[4] == action_type:
+                        await event.edit("Action type setted to " + action_type)
+                        self.cursor.execute("UPDATE reqs SET action_type = ?", (action_type, ))
+                        self.conn.commit()
+                    else:
+                        await event.edit("Action type already is " + action_type)
+                else:
+                    result = self.cursor.execute("SELECT * FROM chats WHERE chats WHERE chat_id = ?", (event.chat_id,)).fetchone()
+                    if result:
+                        if not result[2] == action_type:
+                            await event.edit("Action type in this chat setted to " + action_type)
+                            self.cursor.execute("UPDATE chats SET action_type = ? WHERE chat_id = ?", (action_type, event.chat_id))
+                            self.conn.commit()
+                        else:
+                            await event.edit("Action type in this chat already is " + action_type)
+                    else:
+                        await event.edit("Action type in this chat setted to " + action_type)
+                        self.cursor.execute("INSERT INTO chats VALUES(?, ?, ?)", (event.chat_id, 0, action_type))
+                        self.conn.commit()
+            else:
+                await event.edit("Action type setted to " + action_type)
+                self.cursor.execute("INSERT INTO reqs VALUES(0, 0, 0, ?, 1)", (event.chat_id, 0, action_type))
+                self.conn.commit()
+        else:
+            await event.edit("action type should be (typing, contact, game, location, sticker, record-audio, record-round, record-video, audio, song, round, video, photo, document) ")
+    
+    async def SendActionHandler(self: 'CliHandlers', event: Message) -> None:
+        result = self.cursor.execute("SELECT * FROM reqs").fetchone()
+        if result:
+            if result[3]:
+                async with self.bot.action((await event.get_chat()), 'game') as action:
+                    await asyncio.sleep(2) # 2 seconds
+            
+            else:
+                pass
+
+    async def LOLMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        emojies = ['😂', '😁', '😃', '😀', '😆', '😄', '🤣', '😹', '😸', '😅']
+
+        for emoji in emojies:
+            await event.edit(emoji)
+            await asyncio.sleep(2)
+    
+    async def LikeMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        emojies = ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝']
+
+        for emoji in emojies:
+            await event.edit(emoji)
+            await asyncio.sleep(2)
+    
