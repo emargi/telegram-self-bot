@@ -17,6 +17,7 @@ cursor = connect.cursor()
 
 # Database requirements
 cursor.execute("CREATE TABLE IF NOT EXISTS reqs (timeinbio INTEGER, firstcomment INTEGER)") # Setted integer to get/set it as 0 and 1
+cursor.execute("CREATE TABLE IF NOT EXISTS settings (chat_id INTEGER, action INTEGER, action_type TEXT)") # Setted integer to get/set it as 0 and 1
 connect.commit()
 
 # Bots handlers
@@ -57,6 +58,16 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
     bot.add_event_handler(
         handlers.FirstCommentMessageHandler,
         events.NewMessage(outgoing=True, pattern=r"^first comment [a-zA-Z]+$")
+    )
+
+    bot.add_event_handler(
+        handlers.ActionMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^action [a-zA-Z]+$")
+    )
+
+    bot.add_event_handler(
+        handlers.ActionTypeMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^actiontype [a-zA-Z]+$")
     )
 
     bot.add_event_handler(

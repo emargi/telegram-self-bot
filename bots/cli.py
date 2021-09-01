@@ -265,3 +265,9 @@ class CliHandlers:
             parse_mode="html"
         )
     
+    async def ActionMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        status = event.raw.text.split(" ")[1].lower()
+        if status in ('on', 'off'):
+            query = ""
+        else:
+            await event.edit("Status can be only on or off")
