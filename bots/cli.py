@@ -7,6 +7,8 @@ from time import perf_counter
 import aiocron
 from pytz import timezone
 from datetime import datetime
+from .code_runner import CodeRunner
+from sys import version
 
 @aiocron.crontab("*/1 * * * *") # Every 1 minute
 async def TimeInBio() -> None:
@@ -247,4 +249,19 @@ class CliHandlers:
             return
         
         await self.bot.send_message((await event.get_chat()), "First comment ⚡️", comment_to=event.id)
+    
+    async def CodeRunnerMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        code = event.raw_text.replace("python3 ", '').replace("python3\n", '')
+        status = "𝐿𝒶𝓃𝑔𝓊𝒶𝑔𝑒:\n<code>{}</code>\n\n𝒞𝑜𝒹𝑒:\n<code>{}</code>\n\n𝒪𝓊𝓉𝓅𝓊𝓉:\n<code>{}</code>\n\n𝐸𝓇𝓇𝑜𝓇𝓈:\n<code>{}</code>\n\n𝒯𝒾𝓂𝑒: {} 𝓈𝑒𝒸𝑜𝓃𝒹𝓈"
+
+        cr = CodeRunner(code)
+
+        start_time = perf_counter()
+        result = await cr.Run()
+        end_time = perf_counter()
+
+        await event.edit(
+            status.format(f"Python{version.split(' ')[0]}", code, result.stdout, result.stderr, str(end_time - start_time)),
+            parse_mode="html"
+        )
     
