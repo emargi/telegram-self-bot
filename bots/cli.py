@@ -267,74 +267,6 @@ class CliHandlers:
         )
     # Action
     async def ActionMessageHandler(self: 'CliHandlers', event: Message) -> None:
-        # status = event.text.split(' ')[1].lower()
-
-        # if status not in (
-        #     "off",
-        #     "typing", # https://docs.telethon.dev/en/latest/modules/client.html?highlight=action#telethon.client.chats.ChatMethods.action
-        #     "contact",
-        #     "game",
-        #     "location",
-        #     "sticker",
-        #     "record-audio",
-        #     "record-round",
-        #     "record-video",
-        #     "audio",
-        #     "song",
-        #     "round",
-        #     "video",
-        #     "photo",
-        #     "document",
-        #     "cancel"
-        # ):
-        #     await event.edit("Invalid command!\nMust be among off and chat action types (send panel and search actions on panel)")
-        #     return
-        
-        # chat = await event.get_chat()
-        # isSettedTheRow = lambda cursor: cursor.execute("SELECT * FROM reqs WHERE rowid = 1").fetchone()
-
-        # if status == "off":
-        #     await event.edit("action setted to off")
-
-        #     if isSettedTheRow(self.cursor):
-        #         cmdToExecute = "UPDATE reqs SET action = 0 WHERE rowid = 1"
-            
-        #     else:
-        #         cmdToExecute = "INSERT INTO reqs VALUES (0, 0, 0)"
-        
-        # else:
-        #     await event.edit(f"action setted to {status}")
-
-        #     isSettedTheSecRow = lambda cursor: cursor.execute("SELECT * FROM chat_action WHERE rowid = 1")
-
-        #     if isSettedTheRow(self.cursor):
-        #         cmdToExecute = "UPDATE reqs SET action = 1 WHERE rowid = 1"
-
-        #         if isSettedTheSecRow(self.cursor):
-        #             cmd2ToExecute = f"UPDATE chat_action SET type = '{status}'"
-                
-        #         else:
-        #             cmd2ToExecute = f"INSERT INTO chat_action VALUES ('{status}')"
-            
-        #     else:
-        #         cmdToExecute = "INSERT INTO reqs VALUES (0, 0, 1)"
-
-        #         if isSettedTheSecRow(self.cursor):
-        #             cmd2ToExecute = f"UPDATE chat_action SET type = '{status}'"
-                
-        #         else:
-        #             cmd2ToExecute = f"INSERT INTO chat_action VALUES ('{status}')"
-
-        # self.cursor.execute(cmdToExecute)
-        # self.conn.commit()
-
-        # try:
-        #     self.cursor.execute(cmd2ToExecute)
-        # except:
-        #     pass
-        # else:
-        #     self.conn.commit()
-    
         status = event.raw_text.split(" ")[1].lower()
         if status in ('on', 'off'):
             query = "SELECT * FROM reqs"
@@ -565,12 +497,12 @@ class CliHandlers:
         if result:
             if result[6]:
                 if result[5]:
-                    await self.bot(ReadHistoryRequest(peer=(await event.get_chat()), max_id=event.message.id))
+                    await self.bot(ReadHistoryRequest(peer=(await event.get_chat()), max_id=event.id))
             else:
                 result = self.cursor.execute("SELECT * FROM chats WHERE chat_id = ?", (event.chat_id,)).fetchone()
                 if result:
                     if result[1]:
-                        await self.bot(ReadHistoryRequest(peer=(await event.get_chat()), max_id=event.message.id))
+                        await self.bot(ReadHistoryRequest(peer=(await event.get_chat()), max_id=event.id))
     # Fun
     async def LOLMessageHandler(self: 'CliHandlers', event: Message) -> None:
         emojies = ['😂', '😁', '😃', '😀', '😆', '😄', '🤣', '😹', '😸', '😅']
