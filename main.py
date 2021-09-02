@@ -4,6 +4,7 @@ from telethon import TelegramClient, events
 import asyncio
 import sqlite3
 import logging
+from re import match
 
 # Logging
 logger = logging.basicConfig(level=logging.ERROR)
@@ -15,8 +16,9 @@ config = Config()
 connect = sqlite3.connect("database.db")
 cursor = connect.cursor()
 
+
 # Database requirements
-cursor.execute("CREATE TABLE IF NOT EXISTS reqs (timeinbio INTEGER, firstcomment INTEGER, action INTEGER, action_aor INTEGER, action_type TEXT, markread INTEGER, markread_aor INTEGER)") # Setted integer to get/set it as 0 and 1
+cursor.execute("CREATE TABLE IF NOT EXISTS reqs (timeinbio INTEGER, firstcomment INTEGER, action INTEGER, action_aor INTEGER, action_type TEXT, markread INTEGER, markread_aor INTEGER, poker INTEGER, borop INTEGER)") # Setted integer to get/set it as 0 and 1
 cursor.execute("CREATE TABLE IF NOT EXISTS chats (chat_id TEXT, action INTEGER, action_type TEXT, markread INTEGER)")
 connect.commit()
 
@@ -117,6 +119,36 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
         events.NewMessage(outgoing=True, pattern=r"^like$")
     )
 
+    bot.add_event_handler(
+        handlers.PokerMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^poker [a-zA-Z]+$")
+    )
+
+    bot.add_event_handler(
+        handlers.SendPokerToUser,
+        events.NewMessage(pattern=r'😐', func=lambda event: (event.is_channel and event.is_group) or (event.is_group and not event.is_channel)) # (supergroups) or (groups)
+    )
+
+    bot.add_event_handler(
+        handlers.BolderMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^bold [a-zA-Z]+$")
+    )
+
+    bot.add_event_handler(
+        handlers.ItalicMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^italic [a-zA-Z]+$")
+    )
+
+    bot.add_event_handler(
+        handlers.PartMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^part [a-zA-Z]+$")
+    )
+
+    bot.add_event_handler(
+        handlers.OtherMessageHandler,
+        events.NewMessage(outgoing=True, func=lambda event: not match(r"^part [a-zA-Z]+$|^italic [a-zA-Z]+$|^bold [a-zA-Z]+$|^poker [a-zA-Z]+$|^like$|^lol$|\Apython3[\n ].+|^markread|^action|^first comment|^eval|^timeinbio|^sendall|^vc|^ping|^پینگ$"))
+    )
+    
     await bot.run_until_disconnected()
 
 async def ApiBot(conf: Config) -> None:
@@ -133,6 +165,11 @@ async def ApiBot(conf: Config) -> None:
         events.NewMessage(func=lambda event: event.is_private)
     )
 
+    bot.add_event_handler(
+        handlers.PanelInlineQueryHandler,
+        events.InlineQuery(pattern=r"^__panel__$")
+    )
+    
     await bot.run_until_disconnected()
 
 if __name__ == "__main__":

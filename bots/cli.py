@@ -265,6 +265,7 @@ class CliHandlers:
             status.format(f"Python{version.split(' ')[0]}", code, result.stdout, result.stderr, str(end_time - start_time)),
             parse_mode="html"
         )
+    
     # Action
     async def ActionMessageHandler(self: 'CliHandlers', event: Message) -> None:
         status = event.raw_text.split(" ")[1].lower()
@@ -273,8 +274,8 @@ class CliHandlers:
             result = self.cursor.execute(query)
             result = result.fetchone()
             if result:
-                if str(result[3]) == "1":
-                    if str(result[2]) == "1":
+                if result[3]:
+                    if result[2]: # dadash migam shenidam age ye session ro hamzaman do ta ja run koni del mishe
                         if status == "off":
                             await event.edit("Action sending status turned off")
                             query = "UPDATE reqs SET action = ?"
@@ -327,8 +328,8 @@ class CliHandlers:
                     await event.edit("sending actions in this chat already is off")
                 elif status == "on":
                     await event.edit("sending actions turned on")
-                    query = "INSERT INTO reqs VALUES(0, 0,  ?, ?, \"typing\")"
-                    parameters = (1, 1,)
+                    query = "INSERT INTO reqs VALUES(0, 0, ?, 1, \"typing\", 0, 0)"
+                    parameters = (1,)
                 if ("query" in globals() or "query" in locals()) and "parameters" in globals() or "parameters" in locals(): self.cursor.execute(query, parameters); self.conn.commit()          
         else:
             await event.edit("Status can be only on or off")
@@ -377,7 +378,7 @@ class CliHandlers:
                         self.conn.commit()
             else:
                 await event.edit("Action type setted to " + action_type)
-                self.cursor.execute("INSERT INTO reqs VALUES(0, 0, 0, ?, 1)", (event.chat_id, 0, action_type))
+                self.cursor.execute("INSERT INTO reqs VALUES(0, 0, 0, 1, ?, 0, 1, 0, 0)", (action_type, ))
                 self.conn.commit()
         else:
             await event.edit("action type should be (typing, contact, game, location, sticker, record-audio, record-round, record-video, audio, song, round, video, photo, document) ")
@@ -394,6 +395,10 @@ class CliHandlers:
                     await event.edit("AOR Setted to " + aor)
                     self.cursor.execute("UPDATE reqs SET action_aor = ?", (aor,))
                     self.conn.commit()
+            else:
+                await event.edit("AOR Setted to " + aor)
+                self.cursor.execute("INSERT INTO reqs VALUES(0, 0, 0, ?, \"typing\", 0, 1, 0, 0)", (aor,))
+                self.conn.commit()
         else:
             await event.edit("AOR Should be 0 or 1")
 
@@ -471,7 +476,7 @@ class CliHandlers:
                     await event.edit("Markread in this chat already is off")
                 elif status == "on":
                     await event.edit("Markread turned on")
-                    query = "INSERT INTO reqs VALUES(0, 0,  0, 1, \"typing\", ?, 1)"
+                    query = "INSERT INTO reqs VALUES(0, 0,  0, 1, \"typing\", ?, 1, 0, 0)"
                     parameters = (1,)
                 if ("query" in globals() or "query" in locals()) and "parameters" in globals() or "parameters" in locals(): self.cursor.execute(query, parameters); self.conn.commit()          
         else:
@@ -489,6 +494,10 @@ class CliHandlers:
                     await event.edit("AOR Setted to " + aor)
                     self.cursor.execute("UPDATE reqs SET markread_aor = ?", (aor,))
                     self.conn.commit()
+            else:
+                await event.edit("AOR Setted to " + aor)
+                self.cursor.execute("INSERT INTO reqs VALUES(0, 0, 0, 1, \"typing\", 0, ?, 0, 0)", (aor,))
+                self.conn.commit()
         else:
             await event.edit("AOR Should be 0 or 1")
 
@@ -517,4 +526,103 @@ class CliHandlers:
         for emoji in emojies:
             await event.edit(emoji)
             await asyncio.sleep(2)
+    
+    async def PokerMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        status = event.text.split()[1].lower()
+
+        if status not in ("on", "off"):
+            await event.edit("Invalid command!\nMust be between on and off")
+            return
+        
+        isSettedTheRow = lambda cursor: cursor.execute("SELECT * FROM reqs WHERE rowid = 1").fetchone()
+
+        if isSettedTheRow(self.cursor):
+            cmdToExecute = f"UPDATE reqs SET poker = {'1' if status == 'on' else '0'} WHERE rowid = 1"
+        
+        else:
+            cmdToExecute = f"INSERT INTO reqs VALUES (0, 0, 0, 0, '', 0, 0, {'1' if status == 'on' else '0'})"
+        
+        self.cursor.execute(cmdToExecute)
+        self.conn.commit()
+    
+    async def SendPokerToUser(self: 'CliHandlers', event: Message) -> None:
+        if not self.cursor.execute("SELECT poker FROM reqs WHERE rowid = 1").fetchone():
+            return
+        
+        else:
+            await event.reply('😐')
+    
+    async def BolderMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        status = event.text.split()[1].lower()
+
+        if status not in ("on", "off"):
+            await event.edit("Invalid command!\nMust be between on and off")
+            return
+        
+        isSettedTheRow = lambda cursor: cursor.execute("SELECT * FROM reqs WHERE rowid = 1").fetchone()
+
+        if isSettedTheRow(self.cursor):
+            cmdToExecute = f"UPDATE reqs SET borop = {'1' if status == 'on' else '0'} WHERE rowid = 1" # bor = bold or italic
+        
+        else:
+            cmdToExecute = f"INSERT INTO reqs VALUES (0, 0, 0, 0, '', 0, 0, 0, {'1' if status == 'on' else '0'})"
+        
+        self.cursor.execute(cmdToExecute)
+        self.conn.commit()
+    
+    async def ItalicMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        status = event.text.split()[1].lower()
+
+        if status not in ("on", "off"):
+            await event.edit("Invalid command!\nMust be between on and off")
+            return
+        
+        isSettedTheRow = lambda cursor: cursor.execute("SELECT * FROM reqs WHERE rowid = 1").fetchone()
+
+        if isSettedTheRow(self.cursor):
+            cmdToExecute = f"UPDATE reqs SET borop = {'2' if status == 'on' else '0'} WHERE rowid = 1" # bor = bold or italic or part
+        
+        else:
+            cmdToExecute = f"INSERT INTO reqs VALUES (0, 0, 0, 0, '', 0, 0, 0, {'1' if status == 'on' else '0'})"
+        
+        self.cursor.execute(cmdToExecute)
+        self.conn.commit()
+    
+    async def PartMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        status = event.text.split()[1].lower()
+
+        if status not in ("on", "off"):
+            await event.edit("Invalid command!\nMust be between on and off")
+            return
+        
+        isSettedTheRow = lambda cursor: cursor.execute("SELECT * FROM reqs WHERE rowid = 1").fetchone()
+
+        if isSettedTheRow(self.cursor):
+            cmdToExecute = f"UPDATE reqs SET borop = {'3' if status == 'on' else '0'} WHERE rowid = 1" # borop = bold or italic or part
+        
+        else:
+            cmdToExecute = f"INSERT INTO reqs VALUES (0, 0, 0, 0, '', 0, 0, 0, {'1' if status == 'on' else '0'})"
+        
+        self.cursor.execute(cmdToExecute)
+        self.conn.commit()
+    
+    async def OtherMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        borop = self.cursor.execute("SELECT borop FROM reqs WHERE rowid = 1").fetchone()
+
+        if not borop:
+            return
+        
+        else:
+            if borop == 1:
+                await event.edit(f"**{event.raw_text}**", parse_mode="markdown")
+            
+            elif borop == 2:
+                await event.edit(f"__{event.raw_text}__", parse_mode="markdown")
+
+            else:
+                resultText = ''
+                for i in event.raw_text.split(): # kalame be kaleme
+                    resultText += i
+
+                    await event.edit(resultText)
     
