@@ -361,17 +361,16 @@ class CliHandlers:
                     parameters = (event.chat_id,)
                     result = self.cursor.execute(query, parameters)
                     result = result.fetchone()
-                    if result or result[0]:
+                    if result:
                         action_status = result[1]
-                        action_type   = result[2]
-                        if action_status == "off":
+                        if not action_status:
                             if status == "off":
                                 await event.edit("sending actions in this chat already is off")
                             elif status == "on":
                                 await event.edit("sending action in this chat turned on")
                                 query = "UPDATE chats SET action = 1 WHERE chat_id = ?"
                                 parameters = (event.chat_id,)
-                        elif action_status == "on":
+                        elif action_status:
                             if status == "on":
                                 await event.edit("sending actions in this chat already is on")
                             elif status == "off":
@@ -381,7 +380,6 @@ class CliHandlers:
                         if ("query" in globals() or "query" in locals()) and "parameters" in globals() or "parameters" in locals(): self.cursor.execute(query, parameters); self.conn.commit()
                     else:
                         action_status = "off"
-                        action_type   = "none"
                         if status == "on":
                             await event.edit("sending actions in this chat turned on")
                             query = "INSERT INTO chats VALUES(?, ?, ?)"
@@ -432,7 +430,7 @@ class CliHandlers:
                     else:
                         await event.edit("Action type already is " + action_type)
                 else:
-                    result = self.cursor.execute("SELECT * FROM chats WHERE chats WHERE chat_id = ?", (event.chat_id,)).fetchone()
+                    result = self.cursor.execute("SELECT * FROM chats WHERE chat_id = ?", (event.chat_id,)).fetchone()
                     if result:
                         if not result[2] == action_type:
                             await event.edit("Action type in this chat setted to " + action_type)
@@ -451,15 +449,35 @@ class CliHandlers:
         else:
             await event.edit("action type should be (typing, contact, game, location, sticker, record-audio, record-round, record-video, audio, song, round, video, photo, document) ")
     
+    async def ActionAorMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        aor = event.raw_text.split(' ')[-1]
+        
+        if aor.isdigit() and aor in ('0', '1'):
+            result = self.cursor.execute("SELECT * FROM reqs").fetchone()
+            if result:
+                if str(result[3]) == aor:
+                    await event.edit("AOR already is " + aor)
+                else:
+                    await event.edit("AOR Setted to " + aor)
+                    self.cursor.execute("UPDATE reqs SET action_aor = ?", (aor,))
+                    self.conn.commit()
+        else:
+            await event.edit("AOR Should be 0 or 1")
+
     async def SendActionHandler(self: 'CliHandlers', event: Message) -> None:
+        print("hello")
         result = self.cursor.execute("SELECT * FROM reqs").fetchone()
         if result:
             if result[3]:
-                async with self.bot.action((await event.get_chat()), 'game') as action:
-                    await asyncio.sleep(2) # 2 seconds
-            
+                async with self.bot.action((await event.get_chat()), result[4]) as action:
+                    await asyncio.sleep(4) # 4 seconds
             else:
-                pass
+                result = self.cursor.execute("SELECT * FROM chats WHERE chat_id = ?", (event.chat_id,)).fetchone()
+                if result:
+                    if result[1]:
+                        async with self.bot.action((await event.get_chat()), result[2]) as action:
+                            await asyncio.sleep(4) # 4 seconds
+
 
     async def LOLMessageHandler(self: 'CliHandlers', event: Message) -> None:
         emojies = ['😂', '😁', '😃', '😀', '😆', '😄', '🤣', '😹', '😸', '😅']

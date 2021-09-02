@@ -71,8 +71,13 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
     )
 
     bot.add_event_handler(
+        handlers.ActionAorMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^action aor [a-zA-Z0-9]+$")
+    )
+
+    bot.add_event_handler(
         handlers.SendActionHandler,
-        events.NewMessage(incoming=True, func=lambda event: (event.is_channel and event.is_group) or (event.is_group and not event.is_channel)) # (supergroups) or (groups)
+        events.NewMessage(incoming=True) # (supergroups) or (groups)
     )
 
     bot.add_event_handler(
