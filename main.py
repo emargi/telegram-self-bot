@@ -16,8 +16,8 @@ connect = sqlite3.connect("database.db")
 cursor = connect.cursor()
 
 # Database requirements
-cursor.execute("CREATE TABLE IF NOT EXISTS reqs (timeinbio INTEGER, firstcomment INTEGER, action INTEGER, action_aor INTEGER, action_type TEXT)") # Setted integer to get/set it as 0 and 1
-cursor.execute("CREATE TABLE IF NOT EXISTS chats (chat_id TEXT, action INTEGER, action_type TEXT)")
+cursor.execute("CREATE TABLE IF NOT EXISTS reqs (timeinbio INTEGER, firstcomment INTEGER, action INTEGER, action_aor INTEGER, action_type TEXT, markread INTEGER, markread_aor INTEGER)") # Setted integer to get/set it as 0 and 1
+cursor.execute("CREATE TABLE IF NOT EXISTS chats (chat_id TEXT, action INTEGER, action_type TEXT, markread INTEGER)")
 connect.commit()
 
 # Bots handlers
@@ -60,6 +60,7 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
         events.NewMessage(outgoing=True, pattern=r"^first comment [a-zA-Z]+$")
     )
 
+    # Action handlers
     bot.add_event_handler(
         handlers.ActionMessageHandler,
         events.NewMessage(outgoing=True, pattern=r"^action [a-zA-Z]+$")
@@ -76,8 +77,24 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
     )
 
     bot.add_event_handler(
-        handlers.SendActionHandler,
-        events.NewMessage(incoming=True) # (supergroups) or (groups)
+       handlers.SendActionHandler,
+       events.NewMessage(incoming=True) # (supergroups) or (groups)
+    )
+
+    # Markread handlers
+    bot.add_event_handler(
+        handlers.MarkreadMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^markread [a-zA-Z]+$")
+    )
+
+    bot.add_event_handler(
+        handlers.MarkreadAorMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^markread aor [a-zA-Z0-9]+$")
+    )
+
+    bot.add_event_handler(
+        handlers.SendMarkreadHandler,
+        events.NewMessage(incoming=True)
     )
 
     bot.add_event_handler(

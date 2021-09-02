@@ -1,6 +1,7 @@
 from telethon import TelegramClient, events
 from telethon.tl.custom.message import Message
 from telethon.tl.functions.account import UpdateProfileRequest
+from telethon.tl.functions.messages import ReadHistoryRequest
 import asyncio
 from .vc import VoiceChat
 from time import perf_counter
@@ -264,7 +265,7 @@ class CliHandlers:
             status.format(f"Python{version.split(' ')[0]}", code, result.stdout, result.stderr, str(end_time - start_time)),
             parse_mode="html"
         )
-    
+    # Action
     async def ActionMessageHandler(self: 'CliHandlers', event: Message) -> None:
         # status = event.text.split(' ')[1].lower()
 
@@ -465,20 +466,112 @@ class CliHandlers:
             await event.edit("AOR Should be 0 or 1")
 
     async def SendActionHandler(self: 'CliHandlers', event: Message) -> None:
-        print("hello")
         result = self.cursor.execute("SELECT * FROM reqs").fetchone()
         if result:
             if result[3]:
-                async with self.bot.action((await event.get_chat()), result[4]) as action:
-                    await asyncio.sleep(4) # 4 seconds
+                if result[2]:
+                    async with self.bot.action((await event.get_chat()), result[4]) as action:
+                        await asyncio.sleep(4) # 4 seconds
             else:
                 result = self.cursor.execute("SELECT * FROM chats WHERE chat_id = ?", (event.chat_id,)).fetchone()
                 if result:
                     if result[1]:
                         async with self.bot.action((await event.get_chat()), result[2]) as action:
                             await asyncio.sleep(4) # 4 seconds
+    # Markread
+    async def MarkreadMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        status = event.raw_text.split(" ")[1].lower()
+        if status in ('on', 'off'):
+            query = "SELECT * FROM reqs"
+            result = self.cursor.execute(query)
+            result = result.fetchone()
+            if result:
+                if result[6]:
+                    if result[5]:
+                        if status == "off":
+                            await event.edit("Markread status turned off")
+                            query = "UPDATE reqs SET markread = ?"
+                            parameters = (0,)
+                        else:
+                            await event.edit("Markread status already is on")
+                    else:
+                        if status == "on":
+                            await event.edit("Markread status turned on")
+                            query = "UPDATE reqs SET markread = ?"
+                            parameters = (1,)
+                        else:
+                            await event.edit("Markread status already is off")
+                    if ("query" in globals() or "query" in locals()) and "parameters" in globals() or "parameters" in locals(): self.cursor.execute(query, parameters); self.conn.commit()
+                else:
+                    query = "SELECT * FROM chats WHERE chat_id = ?"
+                    parameters = (event.chat_id,)
+                    result = self.cursor.execute(query, parameters)
+                    result = result.fetchone()
+                    if result:
+                        markread_status = result[3]
+                        if not markread_status:
+                            if status == "off":
+                                await event.edit("Markread in this chat already is off")
+                            elif status == "on":
+                                await event.edit("Markread in this chat turned on")
+                                query = "UPDATE chats SET markread = 1 WHERE chat_id = ?"
+                                parameters = (event.chat_id,)
+                        elif markread_status:
+                            if status == "on":
+                                await event.edit("Markread in this chat already is on")
+                            elif status == "off":
+                                await event.edit("Markread in this chat turned off")
+                                query = "UPDATE chats SET markread = 0 WHERE chat_id = ?"
+                                parameters = (event.chat_id,)
+                        if ("query" in globals() or "query" in locals()) and "parameters" in globals() or "parameters" in locals(): self.cursor.execute(query, parameters); self.conn.commit()
+                    else:
+                        markread_status = "off"
+                        if status == "on":
+                            await event.edit("Markread in this chat turned on")
+                            query = "INSERT INTO chats VALUES(?, ?, ?, ?)"
+                            parameters = (event.chat_id, 0, "typing", 1)
+                        elif status == "off":
+                            await event.edit("Markread in this chat already is off")
+                        if ("query" in globals() or "query" in locals()) and "parameters" in globals() or "parameters" in locals(): self.cursor.execute(query, parameters); self.conn.commit()
+            else:
+                markread_status = "off"
+                if status == "off":
+                    await event.edit("Markread in this chat already is off")
+                elif status == "on":
+                    await event.edit("Markread turned on")
+                    query = "INSERT INTO reqs VALUES(0, 0,  0, 1, \"typing\", ?, 1)"
+                    parameters = (1,)
+                if ("query" in globals() or "query" in locals()) and "parameters" in globals() or "parameters" in locals(): self.cursor.execute(query, parameters); self.conn.commit()          
+        else:
+            await event.edit("Status can be only on or off")
 
+    async def MarkreadAorMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        aor = event.raw_text.split(' ')[-1]
+        
+        if aor.isdigit() and aor in ('0', '1'):
+            result = self.cursor.execute("SELECT * FROM reqs").fetchone()
+            if result:
+                if str(result[6]) == aor:
+                    await event.edit("AOR already is " + aor)
+                else:
+                    await event.edit("AOR Setted to " + aor)
+                    self.cursor.execute("UPDATE reqs SET markread_aor = ?", (aor,))
+                    self.conn.commit()
+        else:
+            await event.edit("AOR Should be 0 or 1")
 
+    async def SendMarkreadHandler(self: 'CliHandlers', event: Message) -> None:
+        result = self.cursor.execute("SELECT * FROM reqs").fetchone()
+        if result:
+            if result[6]:
+                if result[5]:
+                    await self.bot(ReadHistoryRequest(peer=(await event.get_chat()), max_id=event.message.id))
+            else:
+                result = self.cursor.execute("SELECT * FROM chats WHERE chat_id = ?", (event.chat_id,)).fetchone()
+                if result:
+                    if result[1]:
+                        await self.bot(ReadHistoryRequest(peer=(await event.get_chat()), max_id=event.message.id))
+    # Fun
     async def LOLMessageHandler(self: 'CliHandlers', event: Message) -> None:
         emojies = ['😂', '😁', '😃', '😀', '😆', '😄', '🤣', '😹', '😸', '😅']
 
