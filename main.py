@@ -18,7 +18,19 @@ cursor = connect.cursor()
 
 
 # Database requirements
-cursor.execute("CREATE TABLE IF NOT EXISTS reqs (timeinbio INTEGER, firstcomment INTEGER, action INTEGER, action_aor INTEGER, action_type TEXT, markread INTEGER, markread_aor INTEGER, poker INTEGER, borop INTEGER)") # Setted integer to get/set it as 0 and 1
+# default query to execute = (0, 0, 0, 0, 'typing', 0, 0, 0, 0, 'First comment :)')
+cursor.execute("""CREATE TABLE IF NOT EXISTS reqs (
+    timeinbio INTEGER,
+    firstcomment INTEGER,
+    action INTEGER,
+    action_aor INTEGER,
+    action_type TEXT,
+    markread INTEGER,
+    markread_aor INTEGER,
+    poker INTEGER,
+    borop INTEGER,
+    comment_text TEXT
+)""") # Setted integer to get/set it as 0 and 1
 cursor.execute("CREATE TABLE IF NOT EXISTS chats (chat_id TEXT, action INTEGER, action_type TEXT, markread INTEGER)")
 connect.commit()
 
@@ -30,7 +42,12 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
         api_hash = conf.api_hash
     ).start(conf.phone_number)
     
-    handlers = CliHandlers(bot, connect, cursor, logger)
+    handlers = CliHandlers(bot, (await bot.get_me()), connect, cursor, logger, conf)
+
+    bot.add_event_handler(
+        handlers.SendPanel,
+        events.NewMessage(outgoing=True, pattern=r"^panel$")
+    )
 
     bot.add_event_handler(
         handlers.SendPing,
@@ -62,6 +79,11 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
         events.NewMessage(outgoing=True, pattern=r"^first comment [a-zA-Z]+$")
     )
 
+    bot.add_event_handler(
+        handlers.FirstCommentTextMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^comment text .+$")
+    )
+    
     # Action handlers
     bot.add_event_handler(
         handlers.ActionMessageHandler,
@@ -94,6 +116,11 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
         events.NewMessage(outgoing=True, pattern=r"^markread aor [a-zA-Z0-9]+$")
     )
 
+    bot.add_event_handler(
+        handlers.deleteMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"del? [0-9]+$")
+    )
+    
     bot.add_event_handler(
         handlers.SendMarkreadHandler,
         events.NewMessage(incoming=True)
@@ -146,7 +173,7 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
 
     bot.add_event_handler(
         handlers.OtherMessageHandler,
-        events.NewMessage(outgoing=True, func=lambda event: not match(r"^part [a-zA-Z]+$|^italic [a-zA-Z]+$|^bold [a-zA-Z]+$|^poker [a-zA-Z]+$|^like$|^lol$|\Apython3[\n ].+|^markread|^action|^first comment|^eval|^timeinbio|^sendall|^vc|^ping|^پینگ$"))
+        events.NewMessage(outgoing=True, func=lambda event: len([task for task in asyncio.all_tasks() if not task.done()]) <= 14)
     )
     
     await bot.run_until_disconnected()
@@ -158,7 +185,7 @@ async def ApiBot(conf: Config) -> None:
         api_hash = conf.api_hash
     ).start(bot_token=conf.bot_token)
 
-    handlers = ApiHandlers(bot)
+    handlers = ApiHandlers(bot, (await bot.get_me()), conf)
 
     bot.add_event_handler(
         handlers.DeletePrivateMessages,

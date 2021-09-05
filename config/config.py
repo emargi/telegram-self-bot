@@ -30,3 +30,10 @@ class Config:
     @property
     def phone_number(self: 'Config') -> str:
         return self.conf.get("info", "phone_number")
+
+    def set_bot_username(self: 'Config', username: str) -> None:
+        self.conf.set("info", "bot_username", username)
+
+    @property
+    def bot_username(self: 'Config') -> str:
+        return self.conf.get("info", "bot_username")

@@ -12,10 +12,12 @@ class utils:
     ]
 
 class ApiHandlers:
-    def __init__(self: 'ApiHandlers', client: TelegramClient):
+    def __init__(self: 'ApiHandlers', client: TelegramClient, info, config):
         """ApiHandlers class for handling api telegram bot events"""
         self.bot = client
-        self.info = asyncio.get_running_loop().create_task(self.bot.get_me())
+        self.info = info
+        self.conf = config
+        self.conf.set_bot_username(self.info.username)
     
     async def DeletePrivateMessages(self: 'ApiHandlers', event: Message) -> None:
         """Delete private/pv messages"""
