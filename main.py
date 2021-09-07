@@ -16,7 +16,6 @@ config = Config()
 connect = sqlite3.connect("database.db")
 cursor = connect.cursor()
 
-
 # Database requirements
 # default query to execute = (0, 0, 0, 0, 'typing', 0, 0, 0, 0, 'First comment :)')
 cursor.execute("""CREATE TABLE IF NOT EXISTS reqs (
@@ -32,6 +31,7 @@ cursor.execute("""CREATE TABLE IF NOT EXISTS reqs (
     comment_text TEXT
 )""") # Setted integer to get/set it as 0 and 1
 cursor.execute("CREATE TABLE IF NOT EXISTS chats (chat_id TEXT, action INTEGER, action_type TEXT, markread INTEGER)")
+cursor.execute("CREATE TABLE IF NOT EXISTS ads (is_off INTEGER, ad_text TEXT)")
 connect.commit()
 
 # Bots handlers
@@ -176,6 +176,26 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
         events.NewMessage(outgoing=True, func=lambda event: len([task for task in asyncio.all_tasks() if not task.done()]) <= 14)
     )
     
+    bot.add_event_handler(
+        handlers.AdsMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^ads? [a-zA-Z]$")
+    )
+    
+    bot.add_event_handler(
+        handlers.SuperForwardMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^super forward [a-zA-Z0-9@]$", func=lambda event: event.is_reply)
+    )
+
+    bot.add_event_handler(
+        handlers.LeachMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^leach .+$", func=lambda event: len(event.text.split()) > 1)
+    )
+    
+    bot.add_event_handler(
+        handlers.TagAllMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^tag?.+", func=lambda event: (event.is_channel and event.is_group) or (not event.is_channel and event.is_group)) # (supergroups) or (groups)
+    )
+
     await bot.run_until_disconnected()
 
 async def ApiBot(conf: Config) -> None:
@@ -200,11 +220,16 @@ async def ApiBot(conf: Config) -> None:
     await bot.run_until_disconnected()
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(
-        asyncio.gather(
-            *(CliBot(config, connect, cursor, logger), ApiBot(config))
+    try:
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(
+            asyncio.gather(
+                *(CliBot(config, connect, cursor, logger), ApiBot(config))
+            )
         )
-    )
-    loop.run_forever()
-    loop.close()
+        loop.run_forever()
+    except KeyboardInterrupt:
+        print("Program stopped!")
+        loop.close() # Close asynchronous event loop
+        connect.close() # Close database connection
+        quit() # Quit from program
