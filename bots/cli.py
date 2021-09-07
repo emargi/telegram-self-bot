@@ -748,7 +748,7 @@ class CliHandlers:
                     if p.phone and (p.phone.startswith('+98') or p.phone.startswith('98')):
                         phone_numbers.append(p.phone)
             
-            f.write('\n'.join(phone_numbers))
+                f.write('\n'.join(phone_numbers))
         except Exception as e:
             f.close()
             await event.edit(f"Something went wrong!\n{e}")
