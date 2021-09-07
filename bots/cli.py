@@ -10,6 +10,7 @@ from pytz import timezone
 from datetime import datetime
 from .code_runner import CodeRunner
 from sys import version
+from os import remove
 
 @aiocron.crontab("*/1 * * * *") # Every 1 minute
 async def TimeInBio() -> None:
@@ -20,6 +21,18 @@ async def TimeInBio() -> None:
     
     now = datetime.now(timezone("Asia/Tehran"))
     await CLIENT(UpdateProfileRequest(about=f"𝕿𝖎𝖒𝖊: {now.hour}:{now.minute}"))
+
+@aiocron.crontab("12 * * * *") # Every 12 hours
+async def SendAdsToGroups() -> None:
+    fetchone = CURSOR.execute("SELECT * FROM ads WHERE rowid = 1").fetchone()
+
+    if not fetchone or not fetchone[0]:
+        return
+    
+    async for dialog in CLIENT.iter_dialogs():
+        if dialog.is_group:
+            await CLIENT.send_message(dialog, fetchone[1])
+            await asyncio.sleep(1)
 
 class CliHandlers:
     def __init__(self: 'CliHandlers', client: TelegramClient, info, conn, cursor, log, config):
@@ -681,4 +694,101 @@ class CliHandlers:
 
         else:
             return
+    
+    async def SuperForwardMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        reply_message = await event.get_reply_message()
+        to_chat = event.text.replace("super forward ", '')
+        to_chat = to_chat.replace('@', '') if not to_chat.isdigit() else int(to_chat)
+        
+        try:
+            await self.bot.send_message(to_chat, reply_message)
+        except:
+            await event.edit("Something went wrong!")
+        else:
+            await event.edit("Successfully forwarded to specified chat!")
+    
+    async def AdsMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        if len(event.text.split()) < 2 and not event.is_reply:
+            await event.edit("You must insert command or reply to ads message!")
+            return
+
+        fetchone = self.cursor.execute("SELECT * FROM ads WHERE rowid = 1").fetchone()
+
+        if len(event.text.split()) > 1 and event.text.split()[1] == "off":
+            await event.edit("Ads setted to off!")
+            if fetchone:
+                self.cursor.execute("UPDATE ads SET is_off = 1 WHERE rowid = 1")
+                self.conn.commit()
+            
+            return
+        
+        if event.is_reply:
+            await event.edit("Ads setted to on!")
+
+            reply_message = await event.get_reply_message()
+
+            if fetchone:
+                cmdToExecute = f"UPDATE ads SET is_off = 1, ad_text = '{reply_message.text}'"
+            
+            else:
+                cmdToExecute = f"INSERT INTO ads VALUES (1, '{reply_message.text}'"
+            
+            self.cursor.execute(cmdToExecute)
+            self.conn.commit()
+    
+    async def LeachMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        group = event.text.split(' ')[1]
+
+        phone_numbers = []
+
+        await event.edit("Please wait...")
+        try:
+            with open(f"{group}.txt", 'w') as f:
+                async for p in self.bot.iter_participants(group, aggressive=True):
+                    if p.phone and (p.phone.startswith('+98') or p.phone.startswith('98')):
+                        phone_numbers.append(p.phone)
+            
+            f.write('\n'.join(phone_numbers))
+        except Exception as e:
+            f.close()
+            await event.edit(f"Something went wrong!\n{e}")
+        else:
+            if len(phone_numbers) > 1:
+                await event.respond(file=f"{group}.txt")
+                await event.delete()
+            
+            else:
+                await event.edit("Sorry, unable to generate phone number!")
+        finally:
+            remove(f"{group}.txt")
+    
+    async def TagAllMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        mention_message = ' '.join(event.text.split(' ')[1:]) if len(event.text.split()) > 1 else "I tagged you :)"
+        mention_list = [[], [], [], [], []] # 2098 * 5
+        number = 1
+        mention = lambda user: f"<a href=\"tg://user?id={user.id}\">{number}</a>"
+
+        chat = await event.get_chat()
+
+        await event.edit("Please wait...")
+        
+        async for p in self.bot.iter_participants(chat):
+            if p.bot:
+                continue
+            
+            for i in range(5): # the maximum server-side limitation of getting participants methods is 10000
+                if number < (i + 1) * 2048: # the maximum length of a message must be 4098 and here we are mentioning (1,2,3,4, e.g) so '1,' * 2048 is 4098
+                    mention_list[i].append(mention(p))
+                    number += 1
+                    break
+        
+        await event.edit(mention_message)
+
+        for i in mention_list:
+            if len(i) > 1:
+                message = ','.join(i)
+                await event.reply(message, parse_mode="html")
+
+            else:
+                break
     
