@@ -3,3 +3,6 @@ aiohttp
 pytz
 aiocron
 pytgcalls==3.0.0.dev17
+aiofiles
+cryptg
+hachoir

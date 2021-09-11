@@ -168,6 +168,11 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
     )
 
     bot.add_event_handler(
+        handlers.AparatMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^aparat .+$")
+    )
+    
+    bot.add_event_handler(
         handlers.TagAllMessageHandler,
         events.NewMessage(outgoing=True, pattern=r"^tag?.+", func=lambda event: (event.is_channel and event.is_group) or (not event.is_channel and event.is_group)) # (supergroups) or (groups)
     )

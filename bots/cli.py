@@ -9,7 +9,7 @@ from time import perf_counter
 import aiocron
 from pytz import timezone
 from datetime import datetime
-from .utils import CodeRunner, OCR, VoiceChat, YoutubeDownloader
+from .utils import CodeRunner, OCR, VoiceChat, YoutubeDownloader, AparatDownloader
 from sys import version
 from os import remove
 from re import findall
@@ -854,7 +854,7 @@ class CliHandlers:
             except PhoneNumberInvalidError:
                 status.update({phone: "Invalid"})
             else:
-                if sent_code.type == SentCodeTypeSms:
+                if isinstance(sent_code.type, SentCodeTypeSms):
                     status.update({phone: "Not in telegram!"})
                 
                 else:
@@ -865,5 +865,21 @@ class CliHandlers:
 
             await event.edit(text_to_edit(status))
     
-    # TODO Write telegram account phone number validation checker
+    async def AparatMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        aparat_url = event.text.split()[1]
+        try:
+            aparat_dl = AparatDownloader(aparat_url)
+        except AttributeError:
+            return await event.edit("Invalid aparat link!")
+        else:
+            await event.edit("Please wait...")
+
+            info = await aparat_dl.download()
+            await event.delete()
+            await event.respond(
+                f"Title: {info['title']}\nDescription: {info['description']}",
+                file=info["downloaded_file_path"]
+            )
+            remove(info["downloaded_file_path"])
+
     # TODO Write live stream handler

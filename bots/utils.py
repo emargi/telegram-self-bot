@@ -8,6 +8,10 @@ from pytgcalls import GroupCallFactory
 from os import remove
 from pytube import YouTube
 from youtube_dl import YoutubeDL
+from .apis import APIs
+from re import match, findall
+import aiofiles
+import aiohttp
 
 class Std:
     def __init__(self: 'Std', dictionary: dict):
@@ -110,14 +114,12 @@ class VoiceChat:
         self.gcf = GroupCallFactory(client, GroupCallFactory.MTPROTO_CLIENT_TYPE.TELETHON)
         self.gc = self.gcf.get_group_call()
         self.current_audio = None
+        self.AddHandlers()
     
-    async def AddHandlers(self: 'VoiceChat') -> None:
+    def AddHandlers(self: 'VoiceChat') -> None:
         @self.gc.on_audio_playout_ended
         async def _remove_audio_file_after_vc_ended(_, source):
             remove(source)
-    
-    async def _remove_file_after_vc_ended(self: 'VoiceChat', _, source: str):
-        remove(source)
     
     async def Join(self: 'VoiceChat', chatId) -> bool:
         if not self.gc.is_connected:
@@ -157,6 +159,7 @@ class VoiceChat:
             return True
         
         try:
+            await self.gc.start_video("bots/downloads/Telegram-Voice-Chat-2.0-featured.jpg", with_audio=False)
             await self.gc.start_audio(audio_file)
         except Exception as e:
             return False
@@ -199,3 +202,32 @@ class YoutubeDownloader:
     def download(self):
         self.file_path = YouTube(self.url).streams.first().download()
         return self.file_path
+
+class AparatDownloader:
+    def __init__(self: 'AparatDownloader', url: str):
+        self.url = url
+        if not match(r"^http[s]*:\/\/[w\.]*aparat\.com\/v\/\S{5,}$", self.url):
+            raise AttributeError("Invalid aparat url specified: %s" % self.url)
+        
+        self.video_id = findall(r"^http[s]*:\/\/[w\.]*aparat\.com\/v\/(\S{5,})", self.url)[0]
+    
+    async def download(self: 'AparatDownloader') -> dict:
+        resp1 = await APIs.Aparat(self.video_id)
+        
+        if resp1['Ok']:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(resp1['links'][-1]['link']) as resp2:
+                    async with aiofiles.open("bots/downloads/aparat.mp4", 'wb') as f:
+                        async for chunk in resp2.content.iter_any():
+                            await f.write(
+                                chunk
+                            )
+
+            return {
+                "title": resp1['title']['title'],
+                "description": resp1['description']['description'],
+                "downloaded_file_path": "bots/downloads/aparat.mp4"
+            }
+
+        return {}
+    
