@@ -4,35 +4,6 @@ from telethon import TelegramClient, events
 import asyncio
 import sqlite3
 import logging
-from re import match
-
-# Logging
-logger = logging.basicConfig(level=logging.ERROR)
-
-# Config
-config = Config()
-
-# Database connection
-connect = sqlite3.connect("database.db")
-cursor = connect.cursor()
-
-# Database requirements
-# default query to execute = (0, 0, 0, 0, 'typing', 0, 0, 0, 0, 'First comment :)')
-cursor.execute("""CREATE TABLE IF NOT EXISTS reqs (
-    timeinbio INTEGER,
-    firstcomment INTEGER,
-    action INTEGER,
-    action_aor INTEGER,
-    action_type TEXT,
-    markread INTEGER,
-    markread_aor INTEGER,
-    poker INTEGER,
-    borop INTEGER,
-    comment_text TEXT
-)""") # Setted integer to get/set it as 0 and 1
-cursor.execute("CREATE TABLE IF NOT EXISTS chats (chat_id TEXT, action INTEGER, action_type TEXT, markread INTEGER)")
-cursor.execute("CREATE TABLE IF NOT EXISTS ads (is_off INTEGER, ad_text TEXT)")
-connect.commit()
 
 # Bots handlers
 async def CliBot(conf: Config, connect, cursor, logger) -> None:
@@ -70,8 +41,8 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
     )
     
     bot.add_event_handler(
-        handlers.TimeInBioMessageHandler,
-        events.NewMessage(outgoing=True, pattern=r"^timeinbio [a-zA-Z]+$")
+        handlers.TimeInNameMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^timeinName [a-zA-Z]+$")
     )
     
     bot.add_event_handler(
@@ -192,8 +163,23 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
     )
     
     bot.add_event_handler(
+        handlers.YoutubeDownloaderHandler,
+        events.NewMessage(outgoing=True, pattern=r"^ytdl (.*)", func=lambda event: len(event.text.split()) > 1)
+    )
+
+    bot.add_event_handler(
         handlers.TagAllMessageHandler,
         events.NewMessage(outgoing=True, pattern=r"^tag?.+", func=lambda event: (event.is_channel and event.is_group) or (not event.is_channel and event.is_group)) # (supergroups) or (groups)
+    )
+
+    bot.add_event_handler(
+        handlers.OcrMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^ocr$", func=lambda event: event.is_reply)
+    )
+
+    bot.add_event_handler(
+        handlers.CheckPhonesMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^check phones .+")
     )
 
     await bot.run_until_disconnected()
@@ -221,15 +207,62 @@ async def ApiBot(conf: Config) -> None:
 
 if __name__ == "__main__":
     try:
+        # Logging
+        logger = logging.basicConfig(
+            filename="program.log",
+            format="%(asctime)s - %(message)s",
+            level=logging.ERROR,
+            )
+        # logger = logging.basicConfig(level=logging.ERROR)
+        
+        # Config
+        config = Config()
+
+        # Database connection
+        connect = sqlite3.connect("database.db")
+        cursor = connect.cursor()
+
+        # Database requirements
+        # default query to execute = (0, 0, 0, 0, 'typing', 0, 0, 0, 0, 'First comment :)')
+        cursor.execute("""CREATE TABLE IF NOT EXISTS reqs (
+            timeinName INTEGER,
+            firstcomment INTEGER,
+            action INTEGER,
+            action_aor INTEGER,
+            action_type TEXT,
+            markread INTEGER,
+            markread_aor INTEGER,
+            poker INTEGER,
+            borop INTEGER,
+            comment_text TEXT
+        )""") # Setted integer to get/set it as 0 and 1
+        cursor.execute("CREATE TABLE IF NOT EXISTS chats (chat_id TEXT, action INTEGER, action_type TEXT, markread INTEGER)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS ads (is_off INTEGER, ad_text TEXT)")
+        connect.commit()
+
+        # Print program logo to output
+        print(config.logo)
+
+        # Asynchronous event loop
         loop = asyncio.get_event_loop()
+        
+        # Run Bot handlers until complete
         loop.run_until_complete(
             asyncio.gather(
                 *(CliBot(config, connect, cursor, logger), ApiBot(config))
             )
         )
+
         loop.run_forever()
     except KeyboardInterrupt:
+        # Print "program stopped!" to output
         print("Program stopped!")
-        loop.close() # Close asynchronous event loop
-        connect.close() # Close database connection
-        quit() # Quit from program
+
+        # Close asynchronous event loop
+        loop.close()
+
+        # Close database connection
+        connect.close()
+
+        # Quit from program
+        quit()

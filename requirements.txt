@@ -2,5 +2,4 @@ telethon
 aiohttp
 pytz
 aiocron
-pytgcalls
-ffmpeg-python
+pytgcalls==3.0.0.dev17
