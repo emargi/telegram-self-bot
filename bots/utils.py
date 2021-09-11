@@ -206,7 +206,7 @@ class YoutubeDownloader:
 class AparatDownloader:
     def __init__(self: 'AparatDownloader', url: str):
         self.url = url
-        if not match(r"^http[s]*:\/\/[w\.]*aparat\.com\/v\/\S{5,}$", self.url):
+        if not match(r"^http[s]*:\/\/[w\.]*aparat\.com\/v\/\S{5,}", self.url):
             raise AttributeError("Invalid aparat url specified: %s" % self.url)
         
         self.video_id = findall(r"^http[s]*:\/\/[w\.]*aparat\.com\/v\/(\S{5,})", self.url)[0]
