@@ -12,6 +12,7 @@ from .apis import APIs
 from re import match, findall
 import aiofiles
 import aiohttp
+from uuid import uuid4
 
 class Std:
     def __init__(self: 'Std', dictionary: dict):
@@ -205,6 +206,18 @@ class YoutubeDownloader:
 
 class AparatDownloader:
     def __init__(self: 'AparatDownloader', url: str):
+        """
+        AparatDownloader class for downloading aparat videos
+
+        Args:
+            url (`str`) : Aparat video URL
+        
+        Return:
+            an instance of (`AparatDownloader`) class
+        
+        Raise:
+            (`AttributeError`) on invalid aparat URLs
+        """
         self.url = url
         if not match(r"^http[s]*:\/\/[w\.]*aparat\.com\/v\/\S{5,}", self.url):
             raise AttributeError("Invalid aparat url specified: %s" % self.url)
@@ -215,19 +228,47 @@ class AparatDownloader:
         resp1 = await APIs.Aparat(self.video_id)
         
         if resp1['Ok']:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(resp1['links'][-1]['link']) as resp2:
-                    async with aiofiles.open("bots/downloads/aparat.mp4", 'wb') as f:
-                        async for chunk in resp2.content.iter_any():
-                            await f.write(
-                                chunk
-                            )
+            dl_file_path = await AioStreamDownload(
+                self.url,
+                f"aparat{''.join(str(uuid4())[:5])}.mp4"
+            )
 
             return {
                 "title": resp1['title']['title'],
                 "description": resp1['description']['description'],
-                "downloaded_file_path": "bots/downloads/aparat.mp4"
+                "downloaded_file_path": dl_file_path
             }
 
         return {}
+
+async def AioStreamDownload(url: str, file_path: str) -> str:
+    """
+    AioStreamDownload function for downloading specified url opened contents in to specified file_path
+
+    Arguments:
+        url (`str`) : The url that you want to download it contents
+        file_path (`str`) : The file path you want to download into it
     
+    Return:
+        (`str`) : The downloaded file path
+    
+    Example:
+        >>> import asyncio
+        >>> downloaded_file_path = asyncio.run(
+            AioStreamDownload("https://google.com", "google.html")
+        )
+        >>> print(downloaded_file_path)
+        'google.html'
+    """
+    # Open file_path file specified asynchronously
+    async with aiofiles.open(file_path, 'wb') as f:
+        # Write new aiohttp client session to use it to requests
+        async with aiohttp.ClientSession() as session:
+            # Request asynchronously to url with 'GET' method
+            async with session.get(url) as resp:
+                # get any chunk receiving from the target server as soon as it received
+                async for chunk in resp.content.iter_any():
+                    # Write chunk in to the file_path specified
+                    await f.write(chunk)
+    
+    return file_path
