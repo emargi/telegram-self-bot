@@ -13,6 +13,7 @@ from re import match, findall
 import aiofiles
 import aiohttp
 from uuid import uuid4
+from os.path import basename, dirname
 
 class Std:
     def __init__(self: 'Std', dictionary: dict):
@@ -115,12 +116,6 @@ class VoiceChat:
         self.gcf = GroupCallFactory(client, GroupCallFactory.MTPROTO_CLIENT_TYPE.TELETHON)
         self.gc = self.gcf.get_group_call()
         self.current_audio = None
-        self.AddHandlers()
-    
-    def AddHandlers(self: 'VoiceChat') -> None:
-        @self.gc.on_audio_playout_ended
-        async def _remove_audio_file_after_vc_ended(_, source):
-            remove(source)
     
     async def Join(self: 'VoiceChat', chatId) -> bool:
         if not self.gc.is_connected:
@@ -272,3 +267,18 @@ async def AioStreamDownload(url: str, file_path: str) -> str:
                     await f.write(chunk)
     
     return file_path
+
+class LanguageDemoObject:
+    PANEL_MAIN = ...
+    INVALID_COMMAND = ...
+
+def ImageConvertor(real_file: str, to_filename: str) -> str:
+    img = Image.open(real_file)
+    rgb_img = img.convert('RGB')
+    # to_file = f"{dirname(real_file)}/{basename(real_file).replace(basename(real_file.split('.')[1]), to_filename)}"
+    to_file = real_file.replace(basename(real_file), '.'.join([basename(real_file).split('.')[0], to_filename]))
+    rgb_img.save(to_file)
+    img.close()
+
+    remove(real_file)
+    return to_file

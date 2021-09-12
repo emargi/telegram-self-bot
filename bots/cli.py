@@ -9,7 +9,15 @@ from time import perf_counter
 import aiocron
 from pytz import timezone
 from datetime import datetime
-from .utils import CodeRunner, OCR, VoiceChat, YoutubeDownloader, AparatDownloader
+from .utils import (
+    CodeRunner,
+    OCR,
+    VoiceChat,
+    YoutubeDownloader,
+    AparatDownloader,
+    LanguageDemoObject,
+    ImageConvertor
+)
 from sys import version
 from os import remove
 from re import findall
@@ -57,6 +65,7 @@ class CliHandlers:
         self.cursor = cursor
         self.log = log
         self.conf = config
+        self.language: LanguageDemoObject = self.conf.language
 
         global CLIENT
         global CONN
@@ -66,8 +75,6 @@ class CliHandlers:
         CURSOR = self.cursor
     
     async def SendPanel(self: 'CliHandlers', event: Message) -> None:
-        print(len([task for task in asyncio.Task.all_tasks() if not task.done()]))
-
         inline_result = await self.bot.inline_query(self.conf.bot_username, "__panel__")
 
         await event.delete()
@@ -82,7 +89,8 @@ class CliHandlers:
         available_commands = ["join", "leave", "rejoin", "play", "stop", "replay", "pause", "resume"]
 
         if not command in available_commands:
-            await event.edit(f"Invalid command!\nMust be among: {', '.join(available_commands)}")
+            # await event.edit(f"Invalid command!\nMust be among: {', '.join(available_commands)}")
+            await event.edit(self.language.INVALID_COMMAND)
             return
         
         if command == "join":
@@ -882,4 +890,22 @@ class CliHandlers:
             )
             remove(info["downloaded_file_path"])
 
-    # TODO Write live stream handler
+    async def ReverseStickerMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        reply_msg: Message = await event.get_reply_message()
+
+        if reply_msg.sticker or reply_msg.photo and not reply_msg.gif:
+            await event.edit("Downloading...")
+            image_file_path = await self.bot.download_media(reply_msg)
+
+            await event.edit("Converting...")
+            converted_file_path = ImageConvertor(image_file_path, f"{'webp' if reply_msg.photo else 'png'}")
+
+            await event.delete()
+            await event.respond(file=converted_file_path)
+
+            return remove(converted_file_path)
+
+        await event.edit("Please reply to a photo or sticker file!")
+    
+    # TODO Write live stream handler feature
+    # TODO Write sticker to image and image to sticker feature

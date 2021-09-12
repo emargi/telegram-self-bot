@@ -158,6 +158,11 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
     )
 
     bot.add_event_handler(
+        handlers.ReverseStickerMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^reverse sticker$", func=lambda event: event.is_reply)
+    )
+
+    bot.add_event_handler(
         handlers.LeachMessageHandler,
         events.NewMessage(outgoing=True, pattern=r"^leach .+$", func=lambda event: len(event.text.split()) > 1)
     )

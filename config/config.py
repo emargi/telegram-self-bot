@@ -1,5 +1,6 @@
 from configparser import ConfigParser
 from pathlib import Path
+from . import language as lang
 
 class Config:
     def __init__(self: 'Config'):
@@ -37,3 +38,16 @@ class Config:
     @property
     def bot_username(self: 'Config') -> str:
         return self.conf.get("info", "bot_username")
+
+    @property
+    def logo(self: 'Config') -> str:
+        return """____________________________________________________
+__  ____/_  __ \__  /___  __ \__  __ )_  __ \__  __/
+_  / __ _  / / /_  / __  / / /_  __  |  / / /_  /   
+/ /_/ / / /_/ /_  /___  /_/ /_  /_/ // /_/ /_  /    
+\____/  \____/ /_____/_____/ /_____/ \____/ /_/     
+                                                    """
+
+    @property
+    def language(self: 'Config'):
+        return lang
