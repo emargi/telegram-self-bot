@@ -1,9 +1,10 @@
-from telethon import TelegramClient, events
+from telethon import TelegramClient
 from telethon.tl.custom.message import Message
 from telethon.tl.functions.account import UpdateProfileRequest
 from telethon.tl.functions.messages import ReadHistoryRequest
 from telethon.errors import PhoneNumberInvalidError
 from telethon.tl.types.auth import SentCodeTypeSms
+from telethon.tl.types import User
 import asyncio
 from time import perf_counter
 import aiocron
@@ -86,12 +87,12 @@ class CliHandlers:
 
     async def VoiceChatHandler(self: 'CliHandlers', event: Message) -> None:
         command = event.text.split(' ')[1].lower()
-        available_commands = ["join", "leave", "rejoin", "play", "stop", "replay", "pause", "resume"]
+        available_commands = ["join", "leave", "rejoin", "play", "stop", "replay", "pause", "resume", "volume"]
+        success = False
 
         if not command in available_commands:
             # await event.edit(f"Invalid command!\nMust be among: {', '.join(available_commands)}")
-            await event.edit(self.language.INVALID_COMMAND)
-            return
+            return await event.edit(self.language.INVALID_COMMAND)
         
         if command == "join":
             chat = await event.get_chat()
@@ -110,10 +111,7 @@ class CliHandlers:
         
         elif command == "rejoin":
             if await self.vc.Rejoin():
-                await event.delete()
-            
-            else:
-                await event.edit("Something went wrong!")
+                success = True
         
         elif command == "play":
             if not event.is_reply:
@@ -139,32 +137,30 @@ class CliHandlers:
         
         elif command == "stop":
             if await self.vc.Stop():
-                await event.delete()
-            
-            else:
-                await event.edit("Something went wrong!")
+                success = True
         
         elif command == "replay":
             if await self.vc.Replay():
-                await event.delete()
-            
-            else:
-                await event.edit("Something went wrong!")
+                success = True
         
         elif command == "pause":
             if await self.vc.Pause():
-                await event.delete()
-            
-            else:
-                await event.edit("Something went wrong!")
+                success = True
         
-        else:
+        elif command == "resume":
             if await self.vc.Resume():
-                await event.delete()
-            
-            else:
-                await event.edit("Something went wrong!")
-    
+                success = True
+
+        else:
+            if len(event.text.split(' ')) > 2 and event.text.split(' ')[2].isdigit():
+                if await self.vc.Volume(int(event.text.split(' ')[2])):
+                    success = True
+        
+        if success:
+            return await event.delete()
+        
+        await event.edit("Something went wrong!")
+
     async def SendAllDialogs(self: 'CliHandlers', event: Message) -> None:
         dialog_types = ["pv", "groups"]
         wanted_type = event.text.split(' ')[1]
@@ -891,7 +887,7 @@ class CliHandlers:
             remove(info["downloaded_file_path"])
 
     async def ReverseStickerMessageHandler(self: 'CliHandlers', event: Message) -> None:
-        reply_msg: Message = await event.get_reply_message()
+        reply_msg = await event.get_reply_message()
 
         if reply_msg.sticker or reply_msg.photo and not reply_msg.gif:
             await event.edit("Downloading...")
@@ -906,6 +902,34 @@ class CliHandlers:
             return remove(converted_file_path)
 
         await event.edit("Please reply to a photo or sticker file!")
+
+    async def InfoMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        if event.is_reply:
+            reply_msg = await event.get_reply_message()
+            utei: User = await reply_msg.get_sender()
+        
+        else:
+            utei: User = await self.bot.get_me()
+    
+        profile_photos = await self.bot.get_profile_photos(utei, limit=4)
+
+        await event.respond(
+            f"𝓘𝓓: `{utei.id}`\n"
+            f"𝓾𝓼𝓮𝓻𝓷𝓪𝓶𝓮: {utei.username if utei.username else ''}\n"
+            f"𝓯𝓲𝓻𝓼𝓽 𝓷𝓪𝓶𝓮: `{utei.first_name}`\n"
+            f"𝓵𝓪𝓼𝓽 𝓷𝓪𝓶𝓮: {utei.last_name if utei.last_name else ''}\n"
+            f"𝓲𝓼 𝓯𝓪𝓴𝓮: {'𝔂𝓮𝓼' if utei.fake else '𝓷𝓸'}\n"
+            f"𝓲𝓼 𝓼𝓬𝓪𝓶: {'𝔂𝓮𝓼' if utei.scam else '𝓷𝓸'}\n"
+            f"𝓯𝓻𝓸𝓶 𝓼𝓾𝓹𝓹𝓸𝓻𝓽 𝓽𝓮𝓪𝓶: {'𝔂𝓮𝓼' if utei.support else '𝓷𝓸'}\n"
+            f"𝓲𝓼 𝓬𝓸𝓷𝓽𝓪𝓬𝓽: {'𝔂𝓮𝓼' if utei.contact else '𝓷𝓸'}\n"
+            f"𝓲𝓼 𝓶𝓾𝓽𝓾𝓪𝓵 𝓬𝓸𝓷𝓽𝓪𝓬𝓽: {'𝔂𝓮𝓼' if utei.mutual_contact else '𝓷𝓸'}\n"
+            f"𝓭𝓮𝓵𝓮𝓽𝓮𝓭: {'𝔂𝓮𝓼' if utei.deleted else '𝓷𝓸'}\n"
+            f"𝓲𝓼 𝓫𝓸𝓽: {'𝔂𝓮𝓼' if utei.bot else '𝓷𝓸'}\n"
+            f"𝓱𝓪𝓼 𝓹𝓻𝓸𝓯𝓲𝓵𝓮 𝓹𝓱𝓸𝓽𝓸: {'𝔂𝓮𝓼' if utei.photo else '𝓷𝓸'}",
+            file=profile_photos if profile_photos.total else None
+        )
+
+        await event.delete()
     
     # TODO Write live stream handler feature
-    # TODO Write sticker to image and image to sticker feature
+    # TODO Write account info extractor feature

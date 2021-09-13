@@ -26,6 +26,11 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
     )
 
     bot.add_event_handler(
+        handlers.InfoMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^info$")
+    )
+    
+    bot.add_event_handler(
         handlers.VoiceChatHandler,
         events.NewMessage(outgoing=True, pattern=r"^vc [a-zA-Z]+$", func=lambda event: event.is_group)
     )

@@ -154,15 +154,18 @@ class VoiceChat:
             self.current_audio = audio_file
             return True
         
-        try:
-            await self.gc.start_video("bots/downloads/Telegram-Voice-Chat-2.0-featured.jpg", with_audio=False)
-            await self.gc.start_audio(audio_file)
-        except Exception as e:
-            return False
-        else:
-            self.current_audio = audio_file
-            return True
+        if self.gc.is_connected:
+            try:
+                await self.gc.start_video("bots/downloads/Telegram-Voice-Chat-2.0-featured.jpg", with_audio=False)
+                await self.gc.start_audio(audio_file)
+            except:
+                return False
+            else:
+                self.current_audio = audio_file
+                return True
 
+        return False
+    
     async def Stop(self: 'VoiceChat') -> bool:
         if self.gc.is_audio_running:
             await self.gc.stop_audio()
@@ -187,6 +190,17 @@ class VoiceChat:
     async def Resume(self: 'VoiceChat') -> bool:
         if self.gc.is_audio_running:
             await self.gc.set_audio_pause(False)
+            return True
+        
+        return False
+
+    async def Volume(self: 'VoiceChat', v: int) -> bool:
+        if self.gc.is_audio_running:
+            vol = v if not v < 0 and not v > 200 else (0 if v < 0 else 200)
+
+            await self.gc.set_my_volume(
+                vol
+            )
             return True
         
         return False
@@ -272,13 +286,37 @@ class LanguageDemoObject:
     PANEL_MAIN = ...
     INVALID_COMMAND = ...
 
-def ImageConvertor(real_file: str, to_filename: str) -> str:
-    img = Image.open(real_file)
+def ImageConvertor(org_file: str, to_filename: str) -> str:
+    """
+    ImageConvertor function for converting an image file format/filename to another image file format/filename
+
+    Args:
+        org_file (`str`) : original image file
+        to_filename (`str`) : format/filename you want to convert to it
+    
+    Return:
+        (`str`) : converted image file path
+    
+    Example:
+        >>> image = "/home/user/Desktop/test.webp"
+        >>> converted_image = ImageConvertor(image, 'png')
+        >>> print(converted_image)
+        '/home/user/Desktop/test.png'
+    """
+    img = Image.open(org_file)
     rgb_img = img.convert('RGB')
-    # to_file = f"{dirname(real_file)}/{basename(real_file).replace(basename(real_file.split('.')[1]), to_filename)}"
-    to_file = real_file.replace(basename(real_file), '.'.join([basename(real_file).split('.')[0], to_filename]))
+
+    to_file = org_file.replace(
+        basename(org_file),
+        '.'.join(
+            [
+                basename(org_file).split('.')[0], to_filename
+            ]
+        )
+    )
     rgb_img.save(to_file)
+
     img.close()
 
-    remove(real_file)
+    remove(org_file)
     return to_file
