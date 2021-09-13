@@ -32,9 +32,14 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
     
     bot.add_event_handler(
         handlers.VoiceChatHandler,
-        events.NewMessage(outgoing=True, pattern=r"^vc [a-zA-Z]+$", func=lambda event: event.is_group)
+        events.NewMessage(outgoing=True, pattern=r"^voice ", func=lambda event: event.is_group)
     )
     
+    bot.add_event_handler(
+        handlers.LiveStreamMessageHandler,
+        events.NewMessage(outgoing=True, pattern=r"^live ")
+    )
+
     bot.add_event_handler(
         handlers.SendAllDialogs,
         events.NewMessage(outgoing=True, pattern=r"^sendall [a-zA-Z]+$")
@@ -159,7 +164,7 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
     
     bot.add_event_handler(
         handlers.SuperForwardMessageHandler,
-        events.NewMessage(outgoing=True, pattern=r"^super forward [a-zA-Z0-9@]$", func=lambda event: event.is_reply)
+        events.NewMessage(outgoing=True, pattern=r"^super forward [a-zA-Z0-9@]+$", func=lambda event: event.is_reply)
     )
 
     bot.add_event_handler(

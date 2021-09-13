@@ -6,6 +6,7 @@ from PIL import Image
 from typing import Union
 from pytgcalls import GroupCallFactory
 from os import remove
+from glob import glob
 from pytube import YouTube
 from youtube_dl import YoutubeDL
 from .apis import APIs
@@ -13,7 +14,7 @@ from re import match, findall
 import aiofiles
 import aiohttp
 from uuid import uuid4
-from os.path import basename, dirname
+from os.path import basename
 
 class Std:
     def __init__(self: 'Std', dictionary: dict):
@@ -105,6 +106,9 @@ class VoiceChat:
         """
         VoiceChat class for handling telegram application's group/channel voice chats
 
+        Args:
+            client : an instance of (`telethon.TelegramClient`)
+         
         Example:
             >>> import asyncio
             >>> import telethon
@@ -144,7 +148,7 @@ class VoiceChat:
         return False
     
     async def Play(self: 'VoiceChat', audio_file: str) -> bool:
-        if self.gc.is_audio_running:
+        if (self.gc.is_audio_running or self.gc.is_audio_paused):
             await self.Stop()
             
             if audio_file != self.current_audio:
@@ -167,7 +171,7 @@ class VoiceChat:
         return False
     
     async def Stop(self: 'VoiceChat') -> bool:
-        if self.gc.is_audio_running:
+        if (self.gc.is_audio_running or self.gc.is_audio_paused):
             await self.gc.stop_audio()
             return True
         
@@ -181,27 +185,41 @@ class VoiceChat:
         return False
     
     async def Pause(self: 'VoiceChat') -> bool:
-        if self.gc.is_audio_running:
+        if (self.gc.is_audio_running):
             await self.gc.set_audio_pause(True)
             return True
         
         return False
     
     async def Resume(self: 'VoiceChat') -> bool:
-        if self.gc.is_audio_running:
+        if (self.gc.is_audio_paused):
             await self.gc.set_audio_pause(False)
             return True
         
         return False
 
     async def Volume(self: 'VoiceChat', v: int) -> bool:
-        if self.gc.is_audio_running:
+        if (self.gc.is_audio_running or self.gc.is_audio_paused):
             vol = v if not v < 0 and not v > 200 else (0 if v < 0 else 200)
 
             await self.gc.set_my_volume(
                 vol
             )
             return True
+        
+        return False
+
+    async def YTPlay(self: 'VoiceChat', url: str) -> bool:
+        if self.gc.is_connected:
+            if not match(r"^http[s]*:\/\/[w\.]*youtube\.com\/watch\?v=\S{11,}$|^http[s]*:\/\/[w\.]*youtu\.be\/\S{11,}$", url):
+                return False
+            
+            curaudio = f"vcyt{''.join(uuid4()[:5])}"
+            await commandline(
+                f"youtube-dl -f 'bestaudio[ext=mp3]' --merge-output-format mp3 '{url}' -o \"bots/downloads/{curaudio}.%(ext)s\""
+            )
+            self.current_audio = glob(f"{curaudio}.*")[0]
+            return (await self.Play(self.current_audio))
         
         return False
 
@@ -320,3 +338,87 @@ def ImageConvertor(org_file: str, to_filename: str) -> str:
 
     remove(org_file)
     return to_file
+
+class LiveStream(VoiceChat):
+    def __init__(
+        self: 'LiveStream',
+        client
+    ):
+        """
+        LiveStream class for handling telegram application channel live stream
+
+        Args:
+            client : an instance of (`telethon.TelegramClient`)
+        
+        Example:
+            >>> import asyncio
+            >>> live = LiveStream(client)
+            >>> asyncio.run(
+                live.join(
+                    "PyFarsi"
+                )
+            )
+        """
+        self.client = client
+        self.gcf = GroupCallFactory(
+            self.client,
+            GroupCallFactory.MTPROTO_CLIENT_TYPE.TELETHON
+        )
+        self.gc = self.gcf.get_group_call()
+        self.current_video = None
+        super().__init__(self.client)
+    
+    async def Play(self: 'LiveStream', video_file: str) -> bool:
+        if (self.gc.is_video_running or self.gc.is_video_paused):
+            await self.Stop()
+
+            if video_file != self.current_video:
+                remove(self.current_video)
+            
+            await self.gc.start_video(video_file)
+            self.current_video = video_file
+            return True
+        
+        if self.gc.is_connected:
+            try:
+                await self.gc.start_video(video_file)
+            except:
+                return False
+            else:
+                self.current_video = video_file
+                return True
+    
+    async def Stop(self: 'LiveStream') -> bool:
+        if (self.gc.is_video_running or self.gc.is_video_paused):
+            await self.gc.stop_video()
+            return True
+        
+        return False
+    
+    async def Pause(self: 'LiveStream') -> bool:
+        if self.gc.is_video_running:
+            await self.gc.set_video_pause(True)
+            return True
+        
+        return False
+    
+    async def Resume(self: 'LiveStream') -> bool:
+        if self.gc.is_video_paused:
+            await self.gc.set_video_pause(False)
+            return True
+        
+        return False
+
+    async def YTPlay(self: 'LiveStream', url: str) -> bool:
+        if self.gc.is_connected:
+            if not match(r"^http[s]*:\/\/[w\.]*youtube\.com\/watch\?v=\S{11,}$|^http[s]*:\/\/[w\.]*youtu\.be\/\S{11,}$", url):
+                return False
+            
+            curvideo = f"lsyt{''.join(uuid4()[:5])}"
+            await commandline(
+                f"youtube-dl -f 'bestvideo[ext=mp4]' --merge-output-format mp4 '{url}' -o \"bots/downloads/{curvideo}.%(ext)s\""
+            )
+            self.current_video = glob(f"{curvideo}.*")[0]
+            return (await self.Play(self.current_video))
+        
+        return False

@@ -17,7 +17,8 @@ from .utils import (
     YoutubeDownloader,
     AparatDownloader,
     LanguageDemoObject,
-    ImageConvertor
+    ImageConvertor,
+    LiveStream
 )
 from sys import version
 from os import remove
@@ -61,7 +62,8 @@ class CliHandlers:
         """CliHandlers class for handling Client telegram bot events"""
         self.bot = client
         self.info = info
-        self.vc = VoiceChat(client)
+        self.vc = VoiceChat(self.bot)
+        self.ls = LiveStream(self.bot)
         self.conn = conn
         self.cursor = cursor
         self.log = log
@@ -110,7 +112,7 @@ class CliHandlers:
                 await event.edit("Can not leave voice chat in this group right now!")
         
         elif command == "rejoin":
-            if await self.vc.Rejoin():
+            if await self.vc.ReJoin():
                 success = True
         
         elif command == "play":
@@ -134,6 +136,14 @@ class CliHandlers:
             await event.edit("Something went wrong!")
 
             return remove(audio_path)
+        
+        elif command == "ytplay":
+            if len(event.text.split(' ')) > 2:
+                if await self.ls.YTPlay(event.text.split(event.text.split(' ')[2])):
+                    success = True
+            
+            else:
+                return await event.edit("Please specify youtube video url")
         
         elif command == "stop":
             if await self.vc.Stop():
@@ -931,5 +941,84 @@ class CliHandlers:
 
         await event.delete()
     
-    # TODO Write live stream handler feature
-    # TODO Write account info extractor feature
+    async def LiveStreamMessageHandler(self: 'CliHandlers', event: Message) -> None:
+        command = event.text.split(' ')[1].lower()
+        available_commands = ["join", "leave", "rejoin", "play", "stop", "replay", "pause", "resume", "volume"]
+        success = False
+
+        if not command in available_commands:
+            # await event.edit(f"Invalid command!\nMust be among: {', '.join(available_commands)}")
+            return await event.edit(self.language.INVALID_COMMAND)
+        
+        if command == "join":
+            if not len(event.text.split(' ')) > 2:
+                return await event.edit("Please specify the channel you want to join")
+
+            chat = event.text.split(' ')[2]
+            chat = chat if not chat.isdigit() else int(chat)
+            if await self.ls.Join(chat):
+                success = True
+        
+        elif command == "leave":
+            if await self.ls.Leave():
+                success = True
+        
+        elif command == "rejoin":
+            if await self.ls.ReJoin():
+                success = True
+        
+        elif command == "play":
+            if not event.is_reply:
+                return await event.edit("Please reply to a video file!")
+            
+            reply_msg = await event.get_reply_message()
+
+            if not reply_msg.video:
+                return await event.edit("Please reply to a video file!")
+            
+            await event.edit("Ok, Downloading...")
+            
+            video_path = await self.bot.download_media(reply_msg)
+
+            await event.edit("Processing...")
+
+            if await self.ls.Play(video_path):
+                return await event.edit("Playing...")
+            
+            await event.edit("Something went wrong!")
+
+            return remove(video_path)
+        
+        elif command == "ytplay":
+            if len(event.text.split(' ')) > 2:
+                if await self.ls.YTPlay(event.text.split(event.text.split(' ')[2])):
+                    success = True
+            
+            else:
+                return await event.edit("Please specify youtube video url")
+        
+        elif command == "stop":
+            if await self.ls.Stop():
+                success = True
+        
+        elif command == "replay":
+            if await self.ls.Replay():
+                success = True
+        
+        elif command == "pause":
+            if await self.ls.Pause():
+                success = True
+        
+        elif command == "resume":
+            if await self.ls.Resume():
+                success = True
+
+        else:
+            if len(event.text.split(' ')) > 2 and event.text.split(' ')[2].isdigit():
+                if await self.ls.Volume(int(event.text.split(' ')[2])):
+                    success = True
+        
+        if success:
+            return await event.delete()
+        
+        await event.edit("Something went wrong!")
