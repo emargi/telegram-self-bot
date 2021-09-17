@@ -120,6 +120,20 @@ class VoiceChat:
         self.gcf = GroupCallFactory(client, GroupCallFactory.MTPROTO_CLIENT_TYPE.TELETHON)
         self.gc = self.gcf.get_group_call()
         self.current_audio = None
+        self.queue = asyncio.Queue()
+        self.AddHandlers()
+    
+    def AddHandlers(self: 'VoiceChat'):
+        @self.gc.on_audio_playout_ended
+        async def AudioPlayoutEnded(_, source):
+            if not self.queue.empty() and self.gc.is_connected:
+                # Play next audio source
+                will_play = await self.queue.get()
+                await self.Play(will_play)
+            
+            elif self.gc.is_connected:
+                # Repeat
+                await self.Play(source)
     
     async def Join(self: 'VoiceChat', chatId) -> bool:
         if not self.gc.is_connected:
@@ -149,19 +163,13 @@ class VoiceChat:
     
     async def Play(self: 'VoiceChat', audio_file: str) -> bool:
         if (self.gc.is_audio_running or self.gc.is_audio_paused):
-            await self.Stop()
-            
-            if audio_file != self.current_audio:
-                remove(self.current_audio)
-            
-            await self.gc.start_audio(audio_file)
-            self.current_audio = audio_file
+            await self.queue.put(audio_file)
             return True
         
         if self.gc.is_connected:
             try:
                 await self.gc.start_video("bots/downloads/Telegram-Voice-Chat-2.0-featured.jpg", with_audio=False)
-                await self.gc.start_audio(audio_file)
+                await self.gc.start_audio(audio_file, repeat=False)
             except:
                 return False
             else:
@@ -366,22 +374,28 @@ class LiveStream(VoiceChat):
         )
         self.gc = self.gcf.get_group_call()
         self.current_video = None
+        self.queue = asyncio.Queue()
+        self.AddHandlers()
         super().__init__(self.client)
+    
+    def AddHandlers(self: 'LiveStream'):
+        @self.gc.on_video_playout_ended
+        async def VideoPlayoutEnded(_, source):
+            if not self.queue.empty() and self.gc.is_connected:
+                will_play = await self.queue.get()
+                await self.Play(will_play)
+            
+            elif self.gc.is_connected:
+                await self.Leave()
     
     async def Play(self: 'LiveStream', video_file: str) -> bool:
         if (self.gc.is_video_running or self.gc.is_video_paused):
-            await self.Stop()
-
-            if video_file != self.current_video:
-                remove(self.current_video)
-            
-            await self.gc.start_video(video_file)
-            self.current_video = video_file
+            await self.queue.put(video_file)
             return True
         
         if self.gc.is_connected:
             try:
-                await self.gc.start_video(video_file)
+                await self.gc.start_video(video_file, repeat=False)
             except:
                 return False
             else:

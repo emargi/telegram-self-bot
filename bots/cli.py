@@ -129,7 +129,11 @@ class CliHandlers:
             audio_path = await self.bot.download_media(reply_msg)
 
             await event.edit("Processing...")
-
+            
+            if self.vc.gc.is_audio_running:
+                await event.edit("Added to queue")
+                return await self.vc.Play(audio_path)
+            
             if await self.vc.Play(audio_path):
                 return await event.edit("Playing...")
             
@@ -139,7 +143,10 @@ class CliHandlers:
         
         elif command == "ytplay":
             if len(event.text.split(' ')) > 2:
-                if await self.ls.YTPlay(event.text.split(event.text.split(' ')[2])):
+                if self.vc.gc.is_audio_running:
+                    await event.edit("Added to queue")
+                
+                if await self.vc.YTPlay(event.text.split(event.text.split(' ')[2])):
                     success = True
             
             else:
@@ -216,7 +223,6 @@ class CliHandlers:
             real_code = '\n'.join(["  "+c for c in code.split("\n")])
             runner_code = """async def runner(event):\n"""+real_code
             exec(runner_code, globals())
-            runner: callable
             asyncio.get_running_loop().create_task(runner(event))
         except Exception as e:
             end_time = perf_counter()
@@ -935,7 +941,8 @@ class CliHandlers:
             f"𝓲𝓼 𝓶𝓾𝓽𝓾𝓪𝓵 𝓬𝓸𝓷𝓽𝓪𝓬𝓽: {'𝔂𝓮𝓼' if utei.mutual_contact else '𝓷𝓸'}\n"
             f"𝓭𝓮𝓵𝓮𝓽𝓮𝓭: {'𝔂𝓮𝓼' if utei.deleted else '𝓷𝓸'}\n"
             f"𝓲𝓼 𝓫𝓸𝓽: {'𝔂𝓮𝓼' if utei.bot else '𝓷𝓸'}\n"
-            f"𝓱𝓪𝓼 𝓹𝓻𝓸𝓯𝓲𝓵𝓮 𝓹𝓱𝓸𝓽𝓸: {'𝔂𝓮𝓼' if utei.photo else '𝓷𝓸'}",
+            f"𝓱𝓪𝓼 𝓹𝓻𝓸𝓯𝓲𝓵𝓮 𝓹𝓱𝓸𝓽𝓸: {'𝔂𝓮𝓼' if utei.photo else '𝓷𝓸'}\n"
+            f"𝓹𝓱𝓸𝓷𝓮 𝓷𝓾𝓶𝓫𝓮𝓻: {utei.phone if utei.phone else '𝓱𝓲𝓭𝓭𝓮𝓷'}",
             file=profile_photos if profile_photos.total else None
         )
 
@@ -982,6 +989,10 @@ class CliHandlers:
 
             await event.edit("Processing...")
 
+            if self.ls.gc.is_video_running:
+                await event.edit("Added to queue")
+                return await self.ls.Play(video_path)
+            
             if await self.ls.Play(video_path):
                 return await event.edit("Playing...")
             
@@ -991,6 +1002,9 @@ class CliHandlers:
         
         elif command == "ytplay":
             if len(event.text.split(' ')) > 2:
+                if await self.ls.gc.is_video_running:
+                    await event.edit("Added to queue")
+                
                 if await self.ls.YTPlay(event.text.split(event.text.split(' ')[2])):
                     success = True
             
