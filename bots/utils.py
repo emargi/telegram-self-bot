@@ -8,7 +8,6 @@ from pytgcalls import GroupCallFactory
 from os import remove
 from glob import glob
 from pytube import YouTube
-from youtube_dl import YoutubeDL
 from .apis import APIs
 from re import match, findall
 import aiofiles
@@ -219,25 +218,47 @@ class VoiceChat:
 
     async def YTPlay(self: 'VoiceChat', url: str) -> bool:
         if self.gc.is_connected:
-            if not match(r"^http[s]*:\/\/[w\.]*youtube\.com\/watch\?v=\S{11,}$|^http[s]*:\/\/[w\.]*youtu\.be\/\S{11,}$", url):
+            if not youtube_url_check(url):
                 return False
             
-            curaudio = f"vcyt{''.join(uuid4()[:5])}"
+            curaudio = f"vcyt{''.join(str(uuid4())[:5])}"
             await commandline(
                 f"youtube-dl -f 'bestaudio[ext=mp3]' --merge-output-format mp3 '{url}' -o \"bots/downloads/{curaudio}.%(ext)s\""
             )
-            self.current_audio = glob(f"{curaudio}.*")[0]
+            self.current_audio = glob(f"bots/downloads/{curaudio}.*")[0]
             return (await self.Play(self.current_audio))
         
         return False
 
 class YoutubeDownloader:
     def __init__(self, url) -> None:
+        """
+        YoutubeDownloader class for downloading youtube videos
+
+        Args:
+            (`str`) : video URL that you want to download it
+        
+        Raises:
+            (`AttributeError`) : if specified URL is invalid
+        
+        Example:
+            >>> import asyncio
+            >>> yt = YoutubeDownloader("https://youtube.com/watch?v=1234567abcdefg")
+            >>> video_file_path = asyncio.run(yt.download())
+            >>> print(video_file_path)
+            'bots/downloads/ytvdc04d9.mp4'
+        """
         self.url = url
+        if not youtube_url_check(url):
+            raise AttributeError("Invalid URL specified!")
     
-    def download(self):
-        self.file_path = YouTube(self.url).streams.first().download()
-        return self.file_path
+    async def download(self):
+        video_file_name = f"ytvd{''.join(str(uuid4())[:5])}"
+        await commandline(
+            f"youtube-dl -f 'bestvideo[ext=mp4]' --merge-output-format mp4 '{self.url}' -o \"bots/downloads/{video_file_name}.%(ext)s\""
+        )
+
+        return glob(f"bots/downloads/{video_file_name}.*")[0]
 
 class AparatDownloader:
     def __init__(self: 'AparatDownloader', url: str):
@@ -425,14 +446,17 @@ class LiveStream(VoiceChat):
 
     async def YTPlay(self: 'LiveStream', url: str) -> bool:
         if self.gc.is_connected:
-            if not match(r"^http[s]*:\/\/[w\.]*youtube\.com\/watch\?v=\S{11,}$|^http[s]*:\/\/[w\.]*youtu\.be\/\S{11,}$", url):
+            if not youtube_url_check(url):
                 return False
             
-            curvideo = f"lsyt{''.join(uuid4()[:5])}"
+            curvideo = f"lsyt{''.join(str(uuid4())[:5])}"
             await commandline(
                 f"youtube-dl -f 'bestvideo[ext=mp4]' --merge-output-format mp4 '{url}' -o \"bots/downloads/{curvideo}.%(ext)s\""
             )
-            self.current_video = glob(f"{curvideo}.*")[0]
+            self.current_video = glob(f"bots/downloads/{curvideo}.*")[0]
             return (await self.Play(self.current_video))
         
         return False
+
+def youtube_url_check(url: str) -> bool:
+    return match(r"^http[s]*:\/\/[w\.]*youtube\.com\/watch\?v=\S{11,}$|^http[s]*:\/\/[w\.]*youtu\.be\/\S{11,}$", url)

@@ -786,18 +786,18 @@ class CliHandlers:
             remove(f"{group}.txt")
     
     async def YoutubeDownloaderHandler(self: 'CliHandlers', event: Message) -> None:
-        url = event.raw_text.split(" ")[1]
-        if ('http' in url or \
-           'https' in url or \
-           'youtu.be' in url or \
-           'youtube' in url):
-            await event.edit("Downloading Started !")
-            youtube_downloader_obj = YoutubeDownloader(url)
-            file_path = youtube_downloader_obj.download()
-            await event.reply_video(file_path)
-
-
-
+        url = event.text.split()[1]
+        try:
+            ytdl = YoutubeDownloader(url)
+        except AttributeError:
+            return await event.edit("Invalid youtube link!")
+        else:
+            await event.edit("Downloading...")
+            downloaded_file_path = await ytdl.download()
+            await event.delete()
+            await event.respond(file=downloaded_file_path)
+            remove(downloaded_file_path)
+    
     async def TagAllMessageHandler(self: 'CliHandlers', event: Message) -> None:
         mention_message = ' '.join(event.text.split(' ')[1:]) if len(event.text.split()) > 1 else "I tagged you :)"
         mention_list = [[], [], [], [], []] # 2098 * 5

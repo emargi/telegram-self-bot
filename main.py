@@ -179,7 +179,7 @@ async def CliBot(conf: Config, connect, cursor, logger) -> None:
     
     bot.add_event_handler(
         handlers.YoutubeDownloaderHandler,
-        events.NewMessage(outgoing=True, pattern=r"^ytdl (.*)", func=lambda event: len(event.text.split()) > 1)
+        events.NewMessage(outgoing=True, pattern=r"^youtube (.*)", func=lambda event: len(event.text.split()) > 1)
     )
 
     bot.add_event_handler(
